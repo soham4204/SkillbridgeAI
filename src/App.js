@@ -1,23 +1,52 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter } from "react-router-dom";
+import { Routes, Route } from "react-router";
+import Home from "./routes/Home";
+import LoginPage from "./routes/Login";
+import SignupPage from "./routes/Signup";
+import ContactUs from "./routes/ContactUs";
+import ResumeBuilder from "./routes/ResumeBuilder";
+import ResumeUpload from "./routes/ResumeUpload"; // Import the Jobseekers component
+import AboutUs from "./routes/AboutUs";
+import Jobseekers from "./routes/Dashboard";
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { Dashboard } from "@mui/icons-material";
+import InstructionalVideosPage from "./routes/InstructionalVideosPage";
+import ResumeViewer from "./components/ResumeViewer";
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#ffffff',
+    },
+  },
+  typography: {
+    fontFamily: 'Roboto, sans-serif',
+  },
+});
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <ThemeProvider theme={theme}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/contactus" element={<ContactUs />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/resume-builder" element={<ResumeBuilder />} />
+            <Route path="/resume-viewer" element={<ResumeViewer />} />
+            <Route path="/resume-upload" element={<ResumeUpload />} />
+            <Route path="/jobseekers" element={<Jobseekers />} /> 
+            <Route path="/aboutus" element={<AboutUs />} /> 
+            <Route path="/videos" element={<InstructionalVideosPage/>} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     </div>
   );
 }
