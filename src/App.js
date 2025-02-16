@@ -12,6 +12,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { Dashboard } from "@mui/icons-material";
 import InstructionalVideosPage from "./routes/InstructionalVideosPage";
 import ResumeViewer from "./components/ResumeViewer";
+import JobseekerDashboard from "./routes/Jobseeker-dashboard";
 
 const theme = createTheme({
   palette: {
@@ -38,6 +39,7 @@ function App() {
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/contactus" element={<ContactUs />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/jobseeker-dashboard" element={<JobseekerDashboard />} />
             <Route path="/resume-builder" element={<ResumeBuilder />} />
             <Route path="/resume-viewer" element={<ResumeViewer />} />
             <Route path="/resume-upload" element={<ResumeUpload />} />

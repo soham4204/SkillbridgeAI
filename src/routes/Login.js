@@ -97,7 +97,7 @@ const LoginPage = () => {
                             fullWidth
                             margin="normal"
                             id="email"
-                            label="Email ID / Username"
+                            label="Email ID"
                             variant="outlined"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}

@@ -74,7 +74,7 @@ function Dashboard() {
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen">
+    <div className="bg-gray-100 h-screen w-full">
       <div className="container mx-auto py-2 px-6 md:px-8 lg:px-10">
         <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">Jobseekers Dashboard</h1>
         <p className="text-lg md:text-xl text-gray-700 mb-8">

@@ -19,7 +19,7 @@ const ResumeBuilder = () => {
     achievements: [],
   });  
   const [selectedTemplate, setSelectedTemplate] = useState('template1');
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formSubmitted] = useState(false);
 
   const handleTemplateChange = (event) => {
     setSelectedTemplate(event.target.value);
@@ -30,10 +30,10 @@ const ResumeBuilder = () => {
     const savedTemplate = localStorage.getItem('selectedTemplate');
 
     if (savedData) {
-      setResumeData(savedData);  // Set the saved data to the state
+      setResumeData(savedData);  
     }
     if (savedTemplate) {
-      setSelectedTemplate(savedTemplate);  // Set the saved template to the state
+      setSelectedTemplate(savedTemplate); 
     }
   }, []);
 
@@ -138,7 +138,7 @@ const ResumeBuilder = () => {
                   </Grid>
   
                   {/* Professional Summary */}
-                  <Typography variant="h5" style={{ marginTop: '20px' }}>Professional Summary</Typography>
+                  <Typography variant="h5" style={{ marginTop: '20px' }}>Describe yourself in a line</Typography>
                   <Field
                     component={TextField}
                     name="professionalSummary"
@@ -153,12 +153,11 @@ const ResumeBuilder = () => {
                   <Typography variant="h5" style={{ marginTop: '20px' }}>Skills</Typography>
                   <Grid container spacing={3}>
                     <Grid item xs={6}>
-                      <Typography>Technical Skills</Typography>
                       <FieldArray name="skills.technical">
                         {({ push, remove }) => (
                           <div>
                             {values.skills.technical.map((skill, index) => (
-                              <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+                              <div key={index} style={{ display: 'flex', alignItems: 'center', marginTop: '20px' }}>
                                 <Field
                                   component={TextField}
                                   name={`skills.technical[${index}]`}
@@ -176,12 +175,11 @@ const ResumeBuilder = () => {
                     </Grid>
   
                     <Grid item xs={6}>
-                      <Typography>Soft Skills</Typography>
                       <FieldArray name="skills.soft">
                         {({ push, remove }) => (
                           <div>
                             {values.skills.soft.map((skill, index) => (
-                              <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+                              <div key={index} style={{ display: 'flex', alignItems: 'center' , marginTop: '20px'}}>
                                 <Field
                                   component={TextField}
                                   name={`skills.soft[${index}]`}
@@ -206,7 +204,7 @@ const ResumeBuilder = () => {
                       <div>
                         {values.workExperience.map((experience, index) => (
                           <div key={index} style={{ marginBottom: '20px', border: '1px solid #ccc', padding: '10px', borderRadius: '5px' }}>
-                            <Typography>Experience {index + 1}</Typography>
+                            {/* <Typography>Previous Experience</Typography> */}
                             <Grid container spacing={3}>
                               <Grid item xs={6}>
                                 <Field
@@ -254,16 +252,16 @@ const ResumeBuilder = () => {
                                 />
                               </Grid>
                             </Grid>
-                            <Typography>Accomplishments</Typography>
+                            {/* <Typography>Accomplishments</Typography> */}
                             <FieldArray name={`workExperience[${index}].accomplishments`}>
                               {({ push, remove }) => (
                                 <div>
                                   {experience.accomplishments.map((accomplishment, i) => (
-                                    <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' , marginTop: '20px'}}>
                                       <Field
                                         component={TextField}
                                         name={`workExperience[${index}].accomplishments[${i}]`}
-                                        label="Accomplishment"
+                                        label="Description"
                                         variant="outlined"
                                         fullWidth
                                       />
@@ -306,7 +304,7 @@ const ResumeBuilder = () => {
                       <div>
                         {values.education.map((edu, index) => (
                           <div key={index} style={{ marginBottom: '20px', border: '1px solid #ccc', padding: '10px', borderRadius: '5px' }}>
-                            <Typography>Education {index + 1}</Typography>
+                            <Typography></Typography>
                             <Grid container spacing={3}>
                               <Grid item xs={6}>
                                 <Field
@@ -386,7 +384,7 @@ const ResumeBuilder = () => {
                       <div>
                         {values.certifications.map((cert, index) => (
                           <div key={index} style={{ marginBottom: '20px', border: '1px solid #ccc', padding: '10px', borderRadius: '5px' }}>
-                            <Typography>Certification {index + 1}</Typography>
+                            {/* <Typography>Certification {index + 1}</Typography> */}
                             <Grid container spacing={3}>
                               <Grid item xs={6}>
                                 <Field
@@ -447,7 +445,7 @@ const ResumeBuilder = () => {
                       <div>
                         {values.projects.map((proj, index) => (
                           <div key={index} style={{ marginBottom: '20px', border: '1px solid #ccc', padding: '10px', borderRadius: '5px' }}>
-                            <Typography>Project {index + 1}</Typography>
+                            {/* <Typography>Project {index + 1}</Typography> */}
                             <Grid container spacing={3}>
                               <Grid item xs={6}>
                                 <Field
@@ -476,7 +474,7 @@ const ResumeBuilder = () => {
                                   fullWidth
                                 />
                               </Grid>
-                              <Grid item xs={6}>
+                              {/* <Grid item xs={6}>
                                 <Field
                                   component={TextField}
                                   name={`projects[${index}].technologies`}
@@ -484,7 +482,7 @@ const ResumeBuilder = () => {
                                   variant="outlined"
                                   fullWidth
                                 />
-                              </Grid>
+                              </Grid> */}
                             </Grid>
                             {/* Remove Project Button */}
                             {values.projects.length > 1 && (
@@ -517,7 +515,7 @@ const ResumeBuilder = () => {
                       <div>
                         {values.achievements.map((ach, index) => (
                           <div key={index} style={{ marginBottom: '20px', border: '1px solid #ccc', padding: '10px', borderRadius: '5px' }}>
-                            <Typography>Achievement {index + 1}</Typography>
+                            {/* <Typography>Achievement {index + 1}</Typography> */}
                             <Grid container spacing={3}>
                               <Grid item xs={6}>
                                 <Field

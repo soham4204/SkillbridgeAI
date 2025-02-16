@@ -30,8 +30,13 @@ const SignupPage = () => {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
             console.log("Google Sign-In successful:", user);
-
-            navigate('/dashboard'); 
+            if (role === 'jobseeker') {
+                navigate('/jobseeker-dashboard');
+            } else if (role === 'employer') {
+                navigate('/employer-dashboard');
+            } else if (role === 'collaborator') {
+                navigate('/collaborator-dashboard');
+            }
         } catch (error) {
             console.error('Google Sign-In error:', error);
             setError('Failed to sign in with Google.');
