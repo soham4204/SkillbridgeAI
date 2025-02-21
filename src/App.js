@@ -13,6 +13,7 @@ import { Dashboard } from "@mui/icons-material";
 import InstructionalVideosPage from "./routes/InstructionalVideosPage";
 import ResumeViewer from "./components/ResumeViewer";
 import JobseekerDashboard from "./routes/Jobseeker-dashboard";
+import ForgotPasswordPage from "./routes/forgotPassword";
 
 const theme = createTheme({
   palette: {
@@ -46,6 +47,7 @@ function App() {
             <Route path="/jobseekers" element={<Jobseekers />} /> 
             <Route path="/aboutus" element={<AboutUs />} /> 
             <Route path="/videos" element={<InstructionalVideosPage/>} />
+            <Route path='/forgot-password' element={<ForgotPasswordPage/>} />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>

@@ -114,9 +114,8 @@ const LoginPage = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
-
                         <Box mb={2}>
-                            <Link href="#" variant="body2" color="#1976d2">
+                            <Link href="/forgot-password" variant="body2" color="#1976d2">
                                 Forgot Password? Click Here
                             </Link>
                         </Box>
