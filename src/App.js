@@ -14,6 +14,11 @@ import InstructionalVideosPage from "./routes/InstructionalVideosPage";
 import ResumeViewer from "./components/ResumeViewer";
 import JobseekerDashboard from "./routes/Jobseeker-dashboard";
 import ForgotPasswordPage from "./routes/forgotPassword";
+import PostJob from "./components/PostJob";
+import EmployerDashboard from "./routes/Employer-dashboard";
+import JobListings from "./components/JobListings";
+import AI_ML_Test from "./components/tests/AIML";
+import JobDetails from "./routes/JobDetails";
 
 const theme = createTheme({
   palette: {
@@ -30,6 +35,7 @@ const theme = createTheme({
 });
 
 function App() {
+
   return (
     <div className="App">
       <ThemeProvider theme={theme}>
@@ -41,6 +47,7 @@ function App() {
             <Route path="/contactus" element={<ContactUs />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/jobseeker-dashboard" element={<JobseekerDashboard />} />
+            <Route path="/employer-dashboard" element={<EmployerDashboard />} />
             <Route path="/resume-builder" element={<ResumeBuilder />} />
             <Route path="/resume-viewer" element={<ResumeViewer />} />
             <Route path="/resume-upload" element={<ResumeUpload />} />
@@ -48,6 +55,10 @@ function App() {
             <Route path="/aboutus" element={<AboutUs />} /> 
             <Route path="/videos" element={<InstructionalVideosPage/>} />
             <Route path='/forgot-password' element={<ForgotPasswordPage/>} />
+            <Route path="/post-job" element={<PostJob />} />
+            <Route path="/job-listings" element={<JobListings />} />
+            <Route path="/job/:jobRole" element={<JobDetails />} />
+            <Route path="/competency-test/:jobId" element={<AI_ML_Test />} />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>

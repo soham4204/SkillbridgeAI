@@ -7,14 +7,12 @@ import {
     Link,
     Paper,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
-    const navigate = useNavigate();
 
     const handlePasswordReset = async (e) => {
         e.preventDefault();

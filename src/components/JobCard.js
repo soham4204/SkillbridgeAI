@@ -1,30 +1,151 @@
-const JobCard = ({ job }) => (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-4 hover:shadow-lg transition-shadow">
-      <div className="flex items-start">
-        <img src="/api/placeholder/64/64" alt="Company logo" className="w-16 h-16 rounded" />
-        <div className="ml-4 flex-1">
-          <h3 className="text-xl font-semibold text-gray-800">{job.title}</h3>
-          <p className="text-gray-600">{job.company}</p>
-          <p className="text-gray-500 text-sm mt-1">{job.location}</p>
-          <div className="mt-4">
-            <p className="text-gray-700">{job.description}</p>
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase-config";
+import Icons from "./Icons";
+
+const JobCard = ({ job }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [companyData, setCompanyData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // Fetch company data when card is expanded
+  useEffect(() => {
+    if (!expanded) {
+      setCompanyData(null);
+    } else if (job.userId) {
+      const fetchCompanyData = async () => {
+        if (expanded && job.userId) {
+          try {
+            setLoading(true);
+            const companyDocRef = doc(db, "employers", job.userId);
+            const companyDoc = await getDoc(companyDocRef);
+            
+            if (companyDoc.exists()) {
+              setCompanyData(companyDoc.data());
+            } else {
+              setCompanyData(null);
+            }
+          } catch (error) {
+            console.error("Error fetching company data:", error);
+            setCompanyData(null); // Clear data on error
+          } finally {
+            setLoading(false);
+          }
+        }
+      };
+    
+      fetchCompanyData();
+    }
+  }, [expanded, job.userId]);
+  
+  const handleCompetencyTest = () => {
+    // Navigate to competency test page with job ID
+    navigate(`/competency-test/${job.id}`);
+  };
+
+  // Format salary to include commas and currency symbol
+  const formatSalary = (salary) => {
+    return salary ? `$${salary.toLocaleString()}` : "Not disclosed";
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6 transition-all duration-200 hover:shadow-lg">
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-800">{job.jobTitle}</h3>
+          <p className="text-gray-600 font-medium">{job.companyName}</p>
+          <div className="flex items-center mt-1 text-gray-500">
+            <Icons.MapPin className="w-4 h-4 mr-1" />
+            <span>{job.locations ? job.locations.join(", ") : "Remote"}</span>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {job.skills.map((skill, index) => (
-              <span key={index} className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">
-                {skill}
-              </span>
-            ))}
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+            {job.jobType}
+          </span>
+          <span className="text-gray-500 text-sm mt-2">
+            {job.createdAt ? new Date(job.createdAt.toDate()).toLocaleDateString() : "Recently posted"}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="flex flex-wrap gap-2 mt-3">
+          {job.requiredSkills && job.requiredSkills.map((skill, index) => (
+            <span
+              key={index}
+              className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-4 flex justify-between items-center">
+          <div className="text-gray-700 font-medium">
+            {formatSalary(job.salary)} <span className="text-gray-500 font-normal">per year</span>
           </div>
-          <div className="mt-4 flex justify-between items-center">
-            <span className="text-gray-500 text-sm">{job.postedDate}</span>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Apply Now
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-blue-600 hover:text-blue-800 flex items-center text-sm font-medium"
+          >
+            {expanded ? "Show less" : "Show more details"}
+            <Icons.ChevronDown className={`ml-1 w-4 h-4 transition-transform ${expanded ? "transform rotate-180" : ""}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="mt-6 border-t pt-4 animate-fadeIn">
+          <h4 className="font-medium text-gray-800 mb-2">Job Description</h4>
+          <p className="text-gray-700 mb-4 whitespace-pre-line">{job.jobDescription}</p>
+          
+          {/* Company information section */}
+          {loading ? (
+            <div className="flex justify-center items-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
+            </div>
+          ) : companyData ? (
+            <div className="mb-4">
+              <h4 className="font-medium text-gray-800 mb-2">About {job.companyName}</h4>
+              <div className="text-gray-700">
+                {companyData.industry && <p><span className="font-medium">Industry:</span> {companyData.industry}</p>}
+                {companyData.companySize && <p><span className="font-medium">Company Size:</span> {companyData.companySize}</p>}
+                {companyData.headquarters && <p><span className="font-medium">Location:</span> {companyData.headquarters}</p>}
+                {companyData.about && <p><span className="font-medium">About Company:</span> {companyData.about}</p>}
+                {companyData.website && (
+                  <p>
+                    <span className="font-medium">Website:</span>{" "}
+                    <a 
+                      href={companyData.website.startsWith("http") ? companyData.website : `https://${companyData.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      {companyData.website}
+                    </a>
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : null}
+          
+          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 pt-3 border-t">
+            <button
+              onClick={handleCompetencyTest}
+              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-md flex items-center justify-center"
+            >
+              <Icons.FileCheck className="w-4 h-4 mr-2" />
+              Take Competency Test
             </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
+};
 
 export default JobCard;
