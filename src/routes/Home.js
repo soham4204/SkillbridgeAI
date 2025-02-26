@@ -37,41 +37,6 @@ function Home() {
     .catch(error => console.error(error))
     }, []);
 
-    console.log('blogsssssssssssssssssssss', blogs)
-  // Sample blog data
-  // const blogs = [
-  //   {
-  //     title: "5 Tips for a Successful Job Interview",
-  //     excerpt: "Master the art of interviewing with these essential tips to stand out in your next job interview.",
-  //     image: "https://via.placeholder.com/300x200",
-  //     link: "/blog/5-tips-for-a-successful-job-interview"
-  //   },
-  //   {
-  //     title: "The Future of Remote Work",
-  //     excerpt: "Explore the trends and challenges shaping the future of remote work in today's digital age.",
-  //     image: "https://via.placeholder.com/300x200",
-  //     link: "/blog/future-of-remote-work"
-  //   },
-  //   {
-  //     title: "Top 10 Skills Employers Look For",
-  //     excerpt: "Discover the most sought-after skills that can help you land your dream job in any industry.",
-  //     image: "https://via.placeholder.com/300x200",
-  //     link: "/blog/top-10-skills-employers-look-for"
-  //   },
-  //   {
-  //     title: "How to Network Effectively",
-  //     excerpt: "Learn the strategies for effective networking that can help advance your career.",
-  //     image: "https://via.placeholder.com/300x200",
-  //     link: "/blog/how-to-network-effectively"
-  //   },
-  //   {
-  //     title: "Building a Winning Resume",
-  //     excerpt: "Tips on how to create a resume that stands out and gets noticed by employers.",
-  //     image: "https://via.placeholder.com/300x200",
-  //     link: "/blog/building-a-winning-resume"
-  //   },
-  // ];
-
   return (
     <div className="bg-gray-100 min-h-screen">
       <Navbar/>

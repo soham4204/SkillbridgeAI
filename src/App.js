@@ -17,8 +17,9 @@ import ForgotPasswordPage from "./routes/forgotPassword";
 import PostJob from "./components/PostJob";
 import EmployerDashboard from "./routes/Employer-dashboard";
 import JobListings from "./components/JobListings";
-import AI_ML_Test from "./components/tests/AIML";
+import AIMLtest from "./components/tests/AIML";
 import JobDetails from "./routes/JobDetails";
+import ResultsPage from "./components/ResultsPage";
 
 const theme = createTheme({
   palette: {
@@ -58,7 +59,8 @@ function App() {
             <Route path="/post-job" element={<PostJob />} />
             <Route path="/job-listings" element={<JobListings />} />
             <Route path="/job/:jobRole" element={<JobDetails />} />
-            <Route path="/competency-test/:jobId" element={<AI_ML_Test />} />
+            <Route path="/competency-test/:jobId" element={<AIMLtest />} />
+            <Route path="/test-results/:testId/:jobId" element={<ResultsPage />} />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>

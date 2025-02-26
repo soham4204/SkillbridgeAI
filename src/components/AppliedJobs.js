@@ -1,60 +1,203 @@
+import React, { useState, useEffect } from "react";
+import { Box, Typography, CircularProgress, Paper, Divider, Button, Chip } from "@mui/material";
+import { auth, db } from "../firebase-config";
+import { doc, getDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+
 const AppliedJobsPage = () => {
-    const appliedJobs = [
-      {
-        id: 1,
-        company: "Tech Corp",
-        logo: "/api/placeholder/64/64",
-        position: "Senior Frontend Developer",
-        location: "San Francisco, CA",
-        appliedDate: "2024-02-01",
-        status: "Interview Scheduled",
-        statusColor: "text-green-600",
-      },
-      {
-        id: 2,
-        company: "Innovation Labs",
-        logo: "/api/placeholder/64/64",
-        position: "Full Stack Engineer",
-        location: "Remote",
-        appliedDate: "2024-01-28",
-        status: "Under Review",
-        statusColor: "text-yellow-600",
-      },
-    ];
-  
-    return (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-6">Applied Jobs</h2>
-        <div className="space-y-4">
-          {appliedJobs.map(job => (
-            <div key={job.id} className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-start">
-                <img src={job.logo} alt={job.company} className="w-16 h-16 rounded" />
-                <div className="ml-4 flex-1">
-                  <div className="flex justify-between">
-                    <div>
-                      <h3 className="text-xl font-semibold">{job.position}</h3>
-                      <p className="text-gray-600">{job.company}</p>
-                      <p className="text-gray-500">{job.location}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-semibold ${job.statusColor}`}>{job.status}</p>
-                      <p className="text-gray-500 text-sm">Applied: {job.appliedDate}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex justify-between items-center">
-                    <button className="text-blue-600 hover:text-blue-700">View Application</button>
-                    <button className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
-                      Contact Recruiter
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+  const [appliedJobs, setAppliedJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchAppliedJobs = async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        navigate("/login");
+        return;
+      }
+      try {
+        setLoading(true);
+        
+        // Get user's profile to find applied jobs
+        const userDoc = await getDoc(doc(db, "candidates", user.uid));
+        
+        if (!userDoc.exists()) {
+          setAppliedJobs([]);
+          return;
+        }
+        
+        const userData = userDoc.data();
+        const appliedJobsData = userData.appliedJobs || [];
+        
+        // Fetch full job details for each applied job
+        const jobDetails = await Promise.all(
+          appliedJobsData.map(async (application) => {
+            try {
+              const jobDoc = await getDoc(doc(db, "jobs", application.jobId));
+              
+              // Get test details
+              const testDoc = await getDoc(doc(db, "tests", application.testId));
+              const testData = testDoc.exists() ? testDoc.data() : null;
+              
+              return {
+                ...application,
+                jobDetails: jobDoc.exists() ? jobDoc.data() : null,
+                testDetails: testData,
+                appliedDate: application.appliedAt.toDate()
+              };
+            } catch (err) {
+              console.error(`Error fetching job ${application.jobId}:`, err);
+              return {
+                ...application,
+                jobDetails: null,
+                testDetails: null,
+                error: true
+              };
+            }
+          })
+        );
+        
+        setAppliedJobs(jobDetails);
+      } catch (err) {
+        console.error("Error fetching applied jobs:", err);
+        setError("Failed to load your applications. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAppliedJobs();
+  }, [navigate]);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "submitted":
+        return "#3f51b5"; // Indigo
+      case "testing":
+        return "#ff9800"; // Orange
+      case "shortlisted":
+        return "#2196f3"; // Blue
+      case "interview":
+        return "#9c27b0"; // Purple
+      case "rejected":
+        return "#f44336"; // Red
+      case "accepted":
+        return "#4caf50"; // Green
+      default:
+        return "#757575"; // Grey
+    }
   };
+
+  const viewJobDetails = (jobId) => {
+    navigate(`/jobs/${jobId}`);
+  };
+
+  const continueTest = (testId, applicationId) => {
+    navigate(`/test/${testId}?application=${applicationId}`);
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ mt: 4, p: 2 }}>
+        <Typography color="error">{error}</Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => window.location.reload()} 
+          sx={{ mt: 2 }}
+        >
+          Try Again
+        </Button>
+      </Box>
+    );
+  }
+
+  if (appliedJobs.length === 0) {
+    return (
+      <Box sx={{ mt: 4, p: 2 }}>
+        <Typography variant="h5" gutterBottom>Applied Jobs</Typography>
+        <Paper sx={{ p: 3, textAlign: "center" }}>
+          <Typography variant="body1">
+            You haven't applied to any jobs yet.
+          </Typography>
+          <Button 
+            variant="contained" 
+            onClick={() => navigate("/jobs")} 
+            sx={{ mt: 2 }}
+          >
+            Browse Jobs
+          </Button>
+        </Paper>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ mt: 4, p: 2 }}>
+      <Typography variant="h5" gutterBottom>Applied Jobs</Typography>
+      
+      {appliedJobs.map((job) => (
+        <Paper key={job.applicationId} sx={{ p: 3, mb: 2 }}>
+          {job.error ? (
+            <Typography color="error">
+              There was an error loading this application. The job may have been removed.
+            </Typography>
+          ) : (
+            <>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                <Typography variant="h6">{job.jobDetails?.title || "Unknown Job"}</Typography>
+                <Chip 
+                  label={job.status.charAt(0).toUpperCase() + job.status.slice(1)} 
+                  sx={{ 
+                    backgroundColor: getStatusColor(job.status),
+                    color: "white"
+                  }}
+                />
+              </Box>
+              
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                {job.jobDetails?.company || "Unknown Company"} • Applied on {job.appliedDate.toLocaleDateString()}
+              </Typography>
+              
+              <Typography variant="body1" sx={{ mt: 2, mb: 2 }}>
+                {job.jobDetails?.shortDescription || "No description available"}
+              </Typography>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Button 
+                  variant="outlined" 
+                  onClick={() => viewJobDetails(job.jobId)}
+                >
+                  View Job
+                </Button>
+                
+                {job.status === "testing" && job.testDetails && (
+                  <Button 
+                    variant="contained" 
+                    color="primary" 
+                    onClick={() => continueTest(job.testId, job.applicationId)}
+                  >
+                    Continue Test
+                  </Button>
+                )}
+              </Box>
+            </>
+          )}
+        </Paper>
+      ))}
+    </Box>
+  );
+};
 
 export default AppliedJobsPage;
