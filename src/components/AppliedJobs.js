@@ -36,16 +36,22 @@ const AppliedJobsPage = () => {
           appliedJobsData.map(async (application) => {
             try {
               const jobDoc = await getDoc(doc(db, "jobs", application.jobId));
-              
-              // Get test details
-              const testDoc = await getDoc(doc(db, "tests", application.testId));
-              const testData = testDoc.exists() ? testDoc.data() : null;
+              const jobData = jobDoc.exists() ? jobDoc.data() : null;
+
+              // Get test details if available
+              let testData = null;
+              if (application.testId) {
+                const testDoc = await getDoc(doc(db, "tests", application.testId));
+                testData = testDoc.exists() ? testDoc.data() : null;
+              }
               
               return {
                 ...application,
-                jobDetails: jobDoc.exists() ? jobDoc.data() : null,
+                jobDetails: jobData,
                 testDetails: testData,
-                appliedDate: application.appliedAt.toDate()
+                appliedDate: application.appliedAt.toDate(),
+                applicationId: application.jobId + "-" + user.uid, // Unique application ID
+                status: application.status || "submitted", // Default status if missing
               };
             } catch (err) {
               console.error(`Error fetching job ${application.jobId}:`, err);
@@ -131,7 +137,7 @@ const AppliedJobsPage = () => {
           </Typography>
           <Button 
             variant="contained" 
-            onClick={() => navigate("/jobs")} 
+            onClick={() => navigate("/jobseeker-dashboard")} 
             sx={{ mt: 2 }}
           >
             Browse Jobs
@@ -154,7 +160,7 @@ const AppliedJobsPage = () => {
           ) : (
             <>
               <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                <Typography variant="h6">{job.jobDetails?.title || "Unknown Job"}</Typography>
+                <Typography variant="h6">{job.jobDetails?.jobTitle || "Unknown Job"}</Typography>
                 <Chip 
                   label={job.status.charAt(0).toUpperCase() + job.status.slice(1)} 
                   sx={{ 
@@ -165,11 +171,11 @@ const AppliedJobsPage = () => {
               </Box>
               
               <Typography variant="body2" color="text.secondary" gutterBottom>
-                {job.jobDetails?.company || "Unknown Company"} • Applied on {job.appliedDate.toLocaleDateString()}
+                {job.jobDetails?.companyName || "Unknown Company"} • Applied on {job.appliedDate.toLocaleDateString()}
               </Typography>
               
               <Typography variant="body1" sx={{ mt: 2, mb: 2 }}>
-                {job.jobDetails?.shortDescription || "No description available"}
+                {job.jobDetails?.jobDescription || "No description available"}
               </Typography>
               
               <Divider sx={{ my: 2 }} />

@@ -22,6 +22,8 @@ import JobDetails from "./routes/JobDetails";
 import ResultsPage from "./components/ResultsPage";
 import CreateProfile from "./routes/GetStarted";
 import SuccessStories from "./routes/SuccessStories";
+import ManageJobs from "./components/ManageJobs";
+
 
 const theme = createTheme({
   palette: {
@@ -66,6 +68,7 @@ function App() {
             <Route path="/competency-test/:jobId" element={<AIMLtest />} />
             <Route path="/test-results/:testId/:jobId" element={<ResultsPage />} />
             <Route path="/get-started" element={<CreateProfile />} />
+            <Route path="manage-jobs" element={<ManageJobs />} />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>

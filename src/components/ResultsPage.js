@@ -20,7 +20,6 @@ const ResultsPage = () => {
       try {
         setLoading(true);
         
-        // Get the test result
         const resultDoc = await getDoc(doc(db, "tests", testId));
         if (resultDoc.exists()) {
           setResult(resultDoc.data());
@@ -29,20 +28,17 @@ const ResultsPage = () => {
           return;
         }
         
-        // Get the job details
         const jobDoc = await getDoc(doc(db, "jobs", jobId));
         if (jobDoc.exists()) {
           const jobData = jobDoc.data();
           setJob(jobData);
-          
-          // Fetch employer details
-          if (jobData.employerId) {
-            const employerDoc = await getDoc(doc(db, "employers", jobData.employerId));
+
+          if (jobData.userId) {
+            const employerDoc = await getDoc(doc(db, "employers", jobData.userId));
             if (employerDoc.exists()) {
               const employerData = employerDoc.data();
               setEmployer(employerData);
-              
-              // Update job with company name
+
               setJob(prev => ({
                 ...prev,
                 companyName: employerData.companyName || "Unknown Company"
@@ -50,7 +46,6 @@ const ResultsPage = () => {
             }
           }
           
-          // Check if user has already applied for this job
           if (auth.currentUser) {
             const candidateDoc = await getDoc(doc(db, "candidates", auth.currentUser.uid));
             if (candidateDoc.exists()) {
@@ -80,13 +75,24 @@ const ResultsPage = () => {
       setError("You must be logged in to apply");
       return;
     }
-    
+  
     try {
       setApplying(true);
-      
+  
       const candidateId = auth.currentUser.uid;
-      const employerId = job.employerId;
+      const employerId = job.userId;
       const companyName = employer?.companyName || job.companyName || "Unknown Company";
+  
+      // Fetch user's profile from 'userProfiles' collection
+      const userProfileRef = doc(db, "userProfiles", candidateId);
+      const userProfileSnap = await getDoc(userProfileRef);
+  
+      let candidateName = auth.currentUser.displayName || auth.currentUser.email; // Fallback name
+      if (userProfileSnap.exists()) {
+        const userData = userProfileSnap.data();
+        candidateName = userData.fullName || candidateName; // Use fullName if available
+      }
+  
       const applicationData = {
         jobId,
         jobTitle: job.jobTitle,
@@ -94,57 +100,51 @@ const ResultsPage = () => {
         employerId,
         appliedAt: Timestamp.now(),
         testId,
-        testScore: result.percentage
+        testScore: result.percentage,
+        name: candidateName, // Store fetched full name
+        email: auth.currentUser.email,
       };
-      
-      // 1. Update candidate's profile with the applied job
+  
       const candidateDocRef = doc(db, "candidates", candidateId);
       const candidateDoc = await getDoc(candidateDocRef);
-      
+  
       if (!candidateDoc.exists()) {
-        // Create a new candidate document if it doesn't exist
         await setDoc(candidateDocRef, {
-          name: auth.currentUser.displayName || auth.currentUser.email,
+          name: candidateName,
           email: auth.currentUser.email,
-          appliedJobs: [applicationData]
+          appliedJobs: [applicationData],
         });
       } else {
-        // Update the existing candidate document
         await updateDoc(candidateDocRef, {
-          appliedJobs: arrayUnion(applicationData)
+          appliedJobs: arrayUnion(applicationData),
         });
       }
-      
-      // 2. Update the job listing with the new applicant
+  
       const jobDocRef = doc(db, "jobs", jobId);
       await updateDoc(jobDocRef, {
         applicants: arrayUnion({
           userId: candidateId,
-          name: auth.currentUser.displayName || auth.currentUser.email,
+          name: candidateName,
           email: auth.currentUser.email,
           appliedAt: Timestamp.now(),
           testId,
-          testScore: result.percentage
-        })
+          testScore: result.percentage,
+        }),
       });
-      
+  
       setApplied(true);
-      
-      // Redirect after 2 seconds to dashboard
+      setApplying(false);
+  
+      // Redirect to dashboard after 3 seconds
       setTimeout(() => {
-        navigate("/candidate-dashboard");
-      }, 2000);
-      
-    } catch (err) {
-      console.error("Error applying for job:", err);
-      setError(`Failed to apply for the job: ${err.message || "Unknown error"}`);
-    } finally {
+        navigate("/jobseeker-dashboard");
+      }, 3000);
+    } catch (error) {
+      console.error("Error applying for job:", error);
+      setError("Failed to apply for job. Please try again.");
       setApplying(false);
     }
-  };
-
-  // Rest of your component remains the same
-  // ... loading, error handling, recommended courses, etc.
+  };   
 
   const recommendedCourses = [
     { title: "Machine Learning Fundamentals", provider: "Coursera", url: "https://coursera.org/ml-fundamentals" },
@@ -166,7 +166,7 @@ const ResultsPage = () => {
       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
         <Paper sx={{ p: 4, maxWidth: 600, textAlign: "center" }}>
           <Typography variant="h5" color="error" gutterBottom>{error}</Typography>
-          <Button variant="contained" onClick={() => navigate("/candidate-dashboard")}>
+          <Button variant="contained" onClick={() => navigate("/jobseeker-dashboard")}>
             Back to Dashboard
           </Button>
         </Paper>
@@ -180,7 +180,6 @@ const ResultsPage = () => {
     <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", backgroundColor: "#f4f6f9", p: 2 }}>
       <Paper sx={{ padding: 4, maxWidth: 700, width: "100%", borderRadius: 3, boxShadow: 3 }}>
         {applied ? (
-          // Success message after applying
           <Box sx={{ textAlign: "center", py: 4 }}>
             <Typography variant="h4" gutterBottom color="success.main">
               Application Successful!
@@ -188,17 +187,15 @@ const ResultsPage = () => {
             <Typography variant="body1" sx={{ mb: 3 }}>
               Your application for {job?.jobTitle} at {job?.companyName} has been submitted.
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Redirecting to dashboard...
-            </Typography>
+            <Button variant="contained" onClick={() => navigate("/jobseeker-dashboard")}>
+            Back to Dashboard
+            </Button>
           </Box>
         ) : (
-          // Test results
           <>
             <Typography variant="h4" fontWeight="bold" gutterBottom color="primary">
               Test Results
             </Typography>
-            
             <Box sx={{ textAlign: "center", my: 3 }}>
               <Box
                 sx={{
@@ -240,9 +237,7 @@ const ResultsPage = () => {
                 {result?.score} correct out of {result?.totalQuestions} questions
               </Typography>
             </Box>
-            
             <Divider sx={{ my: 2 }} />
-            
             <Box sx={{ mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Job Details
@@ -257,9 +252,7 @@ const ResultsPage = () => {
                 <strong>Required Score:</strong> 60%
               </Typography>
             </Box>
-            
             {isPassing ? (
-              // Passing result - show apply button
               <Box sx={{ textAlign: "center" }}>
                 <Typography variant="body1" sx={{ mb: 3 }}>
                   You've passed the competency test and are eligible to apply for this position.
@@ -276,7 +269,6 @@ const ResultsPage = () => {
                 </Button>
               </Box>
             ) : (
-              // Failed result - show recommendations
               <Box>
                 <Typography variant="body1" sx={{ mb: 2 }}>
                   You didn't meet the minimum score requirement for this position. We recommend enhancing your skills with these courses:

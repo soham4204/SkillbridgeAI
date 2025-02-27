@@ -224,6 +224,62 @@ const ProfilePage = ({ userId }) => {
     return emptyItems[section] || {};
   };
 
+  // Add this function to handle certificate image uploads
+const handleCertificationUpload = async (index, e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+  if (!allowedTypes.includes(file.type)) {
+    setError('Please upload a valid image file (JPEG, PNG, or GIF)');
+    return;
+  }
+
+  setImageUploading(true);
+  setError(null);
+
+  try {
+    // Create FormData to send to Cloudinary
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'profile_pictures');
+    formData.append('folder', `user-profiles/${userId}/certifications`);
+
+    // Call Cloudinary API
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/dihawgvdz/image/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    const data = await response.json();
+    
+    // Update the certification image URL
+    const updatedCertifications = [...formData.certifications];
+    updatedCertifications[index] = {
+      ...updatedCertifications[index],
+      imageUrl: data.secure_url,
+    };
+    
+    setFormData({
+      ...formData,
+      certifications: updatedCertifications,
+    });
+
+  } catch (err) {
+    console.error('Error uploading image:', err);
+    setError('Failed to upload image. Please try again.');
+  } finally {
+    setImageUploading(false);
+  }
+};
+
   // Cloudinary image upload handler
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -273,8 +329,6 @@ const ProfilePage = ({ userId }) => {
       setImageUploading(false);
     }
   };
-  console.log("Cloud name:", process.env.REACT_APP_CLOUDINARY_CLOUD_NAME);
-console.log("Upload preset:", process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET);
 
   const ProfilePicture = () => {
     return (
@@ -442,16 +496,19 @@ console.log("Upload preset:", process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET);
               {isEditing ? (
                 <input
                   type="text"
-                  value={formData.skills.technical.join(", ")}
-                  onChange={(e) =>
-                    handleInputChange("skills", "technical", e.target.value)
-                  }
+                  value={formData.skills && formData.skills.technical ? formData.skills.technical.join(", ") : ""}
+                  onChange={(e) => {
+                    const skillsArray = e.target.value.split(",").map(skill => skill.trim()).filter(Boolean);
+                    handleInputChange("skills", "technical", skillsArray);
+                  }}
                   className="w-full p-2 border rounded"
                   placeholder="Separate skills with commas"
                 />
               ) : (
                 <p className="text-gray-800">
-                  {formData.skills.technical.join(", ")}
+                  {formData.skills && formData.skills.technical && formData.skills.technical.length > 0 
+                    ? formData.skills.technical.join(", ") 
+                    : "No technical skills listed"}
                 </p>
               )}
             </div>
@@ -462,16 +519,19 @@ console.log("Upload preset:", process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET);
               {isEditing ? (
                 <input
                   type="text"
-                  value={formData.skills.soft.join(", ")}
-                  onChange={(e) =>
-                    handleInputChange("skills", "soft", e.target.value)
-                  }
+                  value={formData.skills && formData.skills.soft ? formData.skills.soft.join(", ") : ""}
+                  onChange={(e) => {
+                    const skillsArray = e.target.value.split(",").map(skill => skill.trim()).filter(Boolean);
+                    handleInputChange("skills", "soft", skillsArray);
+                  }}
                   className="w-full p-2 border rounded"
                   placeholder="Separate skills with commas"
                 />
               ) : (
                 <p className="text-gray-800">
-                  {formData.skills.soft.join(", ")}
+                  {formData.skills && formData.skills.soft && formData.skills.soft.length > 0 
+                    ? formData.skills.soft.join(", ") 
+                    : "No soft skills listed"}
                 </p>
               )}
             </div>
@@ -680,31 +740,125 @@ console.log("Upload preset:", process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET);
                     Remove
                   </button>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(cert).map(([key, value]) => (
-                    <div key={key}>
+                
+                {/* Certification title */}
+                <h3 className="text-lg font-medium mb-3">{cert.name}</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left column - Text details */}
+                  <div className="space-y-4">
+                    {Object.entries(cert)
+                      .filter(([key]) => !['imageUrl', 'skills'].includes(key)) // Exclude imageUrl and skills from this loop
+                      .map(([key, value]) => (
+                        <div key={key}>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {key.charAt(0).toUpperCase() + key.slice(1)}
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={value}
+                              onChange={(e) =>
+                                handleInputChange(
+                                  "certifications",
+                                  key,
+                                  e.target.value,
+                                  index
+                                )
+                              }
+                              className="w-full p-2 border rounded"
+                            />
+                          ) : (
+                            <p className="text-gray-800">{value}</p>
+                          )}
+                        </div>
+                      ))}
+                    
+                    {/* Skills section with error handling */}
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                        Skills
                       </label>
                       {isEditing ? (
                         <input
                           type="text"
-                          value={value}
-                          onChange={(e) =>
+                          value={cert.skills && Array.isArray(cert.skills) ? cert.skills.join(", ") : ""}
+                          onChange={(e) => {
+                            const skillsArray = e.target.value.split(",").map(skill => skill.trim()).filter(Boolean);
                             handleInputChange(
                               "certifications",
-                              key,
-                              e.target.value,
+                              "skills",
+                              skillsArray,
                               index
-                            )
-                          }
+                            );
+                          }}
                           className="w-full p-2 border rounded"
+                          placeholder="Separate skills with commas"
                         />
                       ) : (
-                        <p className="text-gray-800">{value}</p>
+                        <p className="text-gray-800">
+                          {cert.skills && Array.isArray(cert.skills) && cert.skills.length > 0 
+                            ? cert.skills.join(", ") 
+                            : "No skills listed"}
+                        </p>
                       )}
                     </div>
-                  ))}
+                  </div>
+                  
+                  {/* Right column - Certification image */}
+                  <div>
+                    {isEditing ? (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Certification Image
+                        </label>
+                        {cert.imageUrl ? (
+                          <div className="relative">
+                            <img 
+                              src={cert.imageUrl} 
+                              alt={cert.name || "Certification"} 
+                              className="w-full max-h-64 object-contain border border-gray-300 rounded"
+                            />
+                            <button
+                              onClick={() => handleInputChange("certifications", "imageUrl", "", index)}
+                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center border border-dashed border-gray-300 rounded-md p-6">
+                            <input
+                              type="file"
+                              id={`certification-image-${index}`}
+                              className="hidden"
+                              accept="image/*"
+                              onChange={(e) => handleCertificationUpload(index, e)}
+                            />
+                            <label
+                              htmlFor={`certification-image-${index}`}
+                              className="cursor-pointer px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                            >
+                              Upload Image
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      cert.imageUrl && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Certification Image
+                          </label>
+                          <img 
+                            src={cert.imageUrl} 
+                            alt={cert.name || "Certification"} 
+                            className="w-full max-h-64 object-contain border border-gray-300 rounded"
+                          />
+                        </div>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

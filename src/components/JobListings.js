@@ -1,128 +1,143 @@
-import React, { useState } from "react";
-import {
-  Box, Card, CardContent, Typography, Select, MenuItem, FormControl,
-  InputLabel, Grid, Divider, Chip
-} from "@mui/material";
-import { Work, Category, Money, LocationOn, Build } from "@mui/icons-material";
-
-const jobListings = [
-  { title: "Software Engineer", category: "Software", type: "Full-time", salary: "₹12,00,000", skills: ["JavaScript", "React", "Node.js"] },
-  { title: "Data Scientist", category: "Software", type: "Full-time", salary: "₹15,00,000", skills: ["Python", "TensorFlow", "SQL"] },
-  { title: "Frontend Developer", category: "Software", type: "Remote", salary: "₹10,00,000", skills: ["HTML", "CSS", "JavaScript", "React"] },
-  { title: "Backend Developer", category: "Software", type: "Full-time", salary: "₹13,00,000", skills: ["Node.js", "Express", "MongoDB"] },
-  { title: "Machine Learning Engineer", category: "AI/ML", type: "Full-time", salary: "₹18,00,000", skills: ["Python", "PyTorch", "Scikit-Learn"] },
-  { title: "DevOps Engineer", category: "Cloud/DevOps", type: "Full-time", salary: "₹14,00,000", skills: ["Docker", "Kubernetes", "AWS"] },
-  { title: "Cybersecurity Analyst", category: "Security", type: "Part-time", salary: "₹11,00,000", skills: ["Network Security", "Penetration Testing", "SIEM"] },
-];
-
+import React, { useEffect, useState } from "react";
+import { auth, db } from "../firebase-config"; // Adjust path if needed
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import ResumeViewer from "./ResumeViewer"; // Adjust path if needed
 
 const JobListings = () => {
-  const [category, setCategory] = useState("");
-  const [jobType, setJobType] = useState("");
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [resumeData, setResumeData] = useState(null);
+  const [loadingResume, setLoadingResume] = useState(false);
 
-  // Filter jobs based on selected category and job type
-  const filteredJobs = jobListings.filter(
-    (job) =>
-      (category === "" || job.category === category) &&
-      (jobType === "" || job.type === jobType)
-  );
+  useEffect(() => {
+    const fetchJobsWithApplicants = async () => {
+      if (!auth.currentUser) {
+        setError("You must be logged in as an employer to view applicants.");
+        setLoading(false);
+        return;
+      }
 
+      try {
+        const employerId = auth.currentUser.uid;
+        const jobsRef = collection(db, "jobs");
+        const q = query(jobsRef, where("userId", "==", employerId));
+        const jobSnapshots = await getDocs(q);
+
+        const jobsData = [];
+        jobSnapshots.forEach((doc) => {
+          const job = doc.data();
+          jobsData.push({ id: doc.id, ...job });
+        });
+
+        setJobs(jobsData);
+      } catch (error) {
+        console.error("Error fetching jobs:", error);
+        setError("Failed to fetch jobs. Please try again.");
+      }
+      setLoading(false);
+    };
+
+    fetchJobsWithApplicants();
+  }, []);
+
+  const fetchApplicantResume = async (userId) => {
+    if (!userId) return;
+    
+    setLoadingResume(true);
+    setResumeData(null);
+    
+    try {
+      // Using the userId as the document ID to fetch the user's profile
+      const userProfileRef = doc(db, "userProfiles", userId);
+      const profileSnapshot = await getDoc(userProfileRef);
+      
+      if (profileSnapshot.exists()) {
+        setResumeData(profileSnapshot.data());
+        setSelectedApplicant(userId);
+      } else {
+        console.error("No resume found for this applicant");
+        setError("No resume found for this applicant");
+      }
+    } catch (error) {
+      console.error("Error fetching resume:", error);
+      setError("Failed to load resume data");
+    } finally {
+      setLoadingResume(false);
+    }
+  };
+
+  const closeResume = () => {
+    setSelectedApplicant(null);
+    setResumeData(null);
+  };
+
+  if (loading) return <p>Loading candidates...</p>;
+  if (error && !selectedApplicant) return <p className="text-red-500">{error}</p>;
 
   return (
-    <Box sx={{ display: "flex" }}>
-      {/* Main Content */}
-      <Box sx={{ flexGrow: 1, padding: 4, maxWidth: "1200px", margin: "auto" }}>
-        <Typography variant="h4" fontWeight="bold" color="primary" gutterBottom>
-          Job Listings
-        </Typography>
+    <div className="p-6">
+      {selectedApplicant ? (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-screen overflow-y-auto p-6 relative">
+            <button 
+              onClick={closeResume} 
+              className="absolute top-4 right-4 bg-gray-200 rounded-full p-2 hover:bg-gray-300 transition"
+            >
+              ✕
+            </button>
+            
+            {loadingResume ? (
+              <p className="text-center py-8">Loading resume...</p>
+            ) : resumeData ? (
+              <ResumeViewer resumeData={resumeData} />
+            ) : (
+              <p className="text-red-500 text-center py-8">Failed to load resume</p>
+            )}
+          </div>
+        </div>
+      ) : null}
+      
+      <h2 className="text-2xl font-bold mb-4">Applied Candidates</h2>
+      {jobs.length === 0 ? (
+        <p>No job applications found.</p>
+      ) : (
+        jobs.map((job) => (
+          <div key={job.id} className="border p-4 rounded-lg shadow-md mb-4">
+            <h3 className="text-xl font-semibold">{job.jobTitle}</h3>
+            <p className="text-gray-600">{job.companyName}</p>
 
-
-        {/* Filters */}
-        <Box sx={{ display: "flex", gap: 2, marginBottom: 3 }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Category</InputLabel>
-            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="Software">Software</MenuItem>
-              <MenuItem value="AI/ML">AI/ML</MenuItem>
-              <MenuItem value="Cloud/DevOps">Cloud/DevOps</MenuItem>
-              <MenuItem value="Security">Security</MenuItem>
-            </Select>
-          </FormControl>
-
-
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Job Type</InputLabel>
-            <Select value={jobType} onChange={(e) => setJobType(e.target.value)}>
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="Full-time">Full-time</MenuItem>
-              <MenuItem value="Part-time">Part-time</MenuItem>
-              <MenuItem value="Remote">Remote</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-
-
-        {/* Job Listings */}
-        <Grid container spacing={3}>
-          {filteredJobs.length > 0 ? (
-            filteredJobs.map((job, index) => (
-              <Grid item xs={12} key={index}>
-                <Card
-                  sx={{
-                    borderRadius: 3,
-                    boxShadow: 3,
-                    padding: 2,
-                    background: "linear-gradient(135deg, #f5f7fa, #e6eef8)",
-                    transition: "transform 0.3s",
-                    "&:hover": { transform: "scale(1.02)" },
-                  }}
-                >
-                  <CardContent>
-                    {/* Job Title */}
-                    <Typography variant="h6" fontWeight="bold" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Work color="primary" /> {job.title}
-                    </Typography>
-                   
-                    <Divider sx={{ marginY: 1 }} />
-
-
-                    {/* Job Details */}
-                    <Typography sx={{ display: "flex", alignItems: "center", gap: 1, color: "text.secondary" }}>
-                      <Category fontSize="small" /> {job.category}
-                    </Typography>
-                    <Typography sx={{ display: "flex", alignItems: "center", gap: 1, color: "primary.main" }}>
-                      <LocationOn fontSize="small" /> {job.type}
-                    </Typography>
-                    <Typography fontWeight="bold" color="secondary" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Money fontSize="small" /> {job.salary} per year
-                    </Typography>
-
-
-                    <Divider sx={{ marginY: 2 }} />
-
-
-                    {/* Required Skills */}
-                    <Typography fontWeight="bold" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Build color="primary" /> Required Skills:
-                    </Typography>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, marginTop: 1 }}>
-                      {job.skills.map((skill, i) => (
-                        <Chip key={i} label={skill} sx={{ background: "#e0f2f1", fontWeight: "bold" }} />
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
-          ) : (
-            <Typography>No jobs found.</Typography>
-          )}
-        </Grid>
-      </Box>
-    </Box>
+            {job.applicants && job.applicants.length > 0 ? (
+              <ul className="mt-2">
+                {job.applicants.map((applicant, index) => (
+                  <li key={index} className="p-2 border-b">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium">{applicant.name}</p>
+                        <p className="text-gray-500">{applicant.email}</p>
+                        {applicant.testScore !== undefined && (
+                          <p className="text-blue-500">Test Score: {applicant.testScore}%</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => fetchApplicantResume(applicant.userId)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition"
+                      >
+                        View Resume
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500 mt-2">No applicants for this job yet.</p>
+            )}
+          </div>
+        ))
+      )}
+    </div>
   );
 };
-
 
 export default JobListings;

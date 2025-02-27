@@ -1,95 +1,200 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { ResumeTemplate1, ResumeTemplate2, ResumeTemplate3 } from './ResumeTemplates';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { useNavigate } from 'react-router-dom';
+import React from "react";
+import { FaEnvelope, FaPhone, FaMapMarkerAlt } from "react-icons/fa";
 
-const ResumeViewer = ({ data, setData }) => {
-  const navigate = useNavigate();
-  const resumeRef = useRef();
-  const [selectedTemplate, setSelectedTemplate] = useState('template1');
+const ResumeViewer = ({ resumeData }) => {
+  const currentYear = new Date().getFullYear();
 
-  // Load saved state from localStorage when component mounts
-  useEffect(() => {
-    const savedData = JSON.parse(localStorage.getItem('resumeData'));
-    const savedTemplate = localStorage.getItem('selectedTemplate');
-  
-    if (savedData) {
-      // Directly set the state within ResumeViewer
-      setSelectedTemplate(savedTemplate || 'template1');
-    }
-  }, []);
-  
-
-  const handleDownloadPDF = async () => {
-    const element = resumeRef.current;
-    const canvas = await html2canvas(element, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * pageWidth) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save('resume.pdf');
-  };
-
-  const handleGoBack = () => {
-    // Save current state to localStorage
-    localStorage.setItem('resumeData', JSON.stringify(data));
-    localStorage.setItem('selectedTemplate', selectedTemplate);
-    navigate('/resume-builder'); // Navigate back to the builder
-  };
-
-  const renderTemplate = () => {
-    switch (selectedTemplate) {
-      case 'template1':
-        return <ResumeTemplate1 data={data} />;
-      case 'template2':
-        return <ResumeTemplate2 data={data} />;
-      case 'template3':
-        return <ResumeTemplate3 data={data} />;
-      default:
-        return <ResumeTemplate1 data={data} />;
-    }
-  };
+  if (!resumeData) {
+    return <p className="text-red-500">No resume data available</p>;
+  }
 
   return (
-    <div className="p-4">
-      <div className="mb-4">
-        <label htmlFor="template-selector" className="mr-2 text-gray-700 font-semibold">
-          Select Template:
-        </label>
-        <select
-          id="template-selector"
-          value={selectedTemplate}
-          onChange={(e) => setSelectedTemplate(e.target.value)}
-          className="px-3 py-2 border rounded shadow"
-        >
-          <option value="template1">Template 1</option>
-          <option value="template2">Template 2</option>
-          <option value="template3">Template 3</option>
-        </select>
+    <div id="resume-content" className="bg-white space-y-4 p-6">
+      {/* Header/Contact Information with Profile Picture */}
+      <div className="border-b border-gray-600 pb-2">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <h2 className="text-6xl font-bold text-gray-800 mb-2">
+              {resumeData?.contactInformation?.fullName}
+            </h2>
+            {resumeData?.professionalSummary && (
+              <p className="text-gray-600 mb-4 text-lg">
+                {resumeData?.professionalSummary}
+              </p>
+            )}
+          </div>
+          
+          {/* Profile Picture - only render if exists */}
+          {resumeData?.profilePicture && (
+            <div className="">
+              <img 
+                src={resumeData?.profilePicture} 
+                alt="Profile" 
+                className="w-32 h-32 flex-shrink-0 overflow-hidden border-2 border-gray-300 rounded-md"
+              />
+            </div>
+          )}
+        </div>
+  
+        {/* Contact information - only render if contact details exist */}
+        {(resumeData?.contactInformation?.email || 
+          resumeData?.contactInformation?.phoneNumber || 
+          resumeData?.contactInformation?.address) && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700 mt-4">
+            {resumeData?.contactInformation?.email && (
+              <p className="flex items-center">
+                <FaEnvelope className="mr-2 text-blue-500" />
+                {resumeData?.contactInformation?.email}
+              </p>
+            )}
+            {resumeData?.contactInformation?.phoneNumber && (
+              <p className="flex items-center">
+                <FaPhone className="mr-2 text-blue-500" />
+                {resumeData?.contactInformation?.phoneNumber}
+              </p>
+            )}
+            {resumeData?.contactInformation?.address && (
+              <p className="flex items-center">
+                <FaMapMarkerAlt className="mr-2 text-blue-500" />
+                {resumeData?.contactInformation?.address}
+              </p>
+            )}
+          </div>
+        )}
       </div>
-
-      <div ref={resumeRef} className="border p-4 rounded shadow">
-        {renderTemplate()}
-      </div>
-
-      <div className="mt-4">
-        <button
-          onClick={handleDownloadPDF}
-          className="px-4 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 mr-4"
-        >
-          Download PDF
-        </button>
-        <button
-          onClick={handleGoBack}
-          className="px-4 py-2 bg-gray-500 text-white rounded shadow hover:bg-gray-600"
-        >
-          Go Back to Builder
-        </button>
+  
+      <div className="flex flex-row text-justify">
+        <div className="flex w-full flex-col pr-3 border-r border-gray-600">
+          {/* Education - only render if education array exists and has items */}
+          {resumeData?.education && resumeData.education.length > 0 && (
+            <div className="pb-2 border-b border-gray-600">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Education</h3>
+              <div className="space-y-6">
+                {resumeData.education.map((edu, index) => {
+                  return (
+                    <p key={index} className="text-gray-700">
+                      <li>
+                        <>
+                          {edu.graduationYear > currentYear ? (
+                            <>
+                            Currently pursuing <strong>{edu.degree}</strong> from {edu.institution}, expected to graduate in {edu.graduationYear} with current grade of <strong>{edu.grade}</strong>.
+                            </>
+                          ) : edu.graduationYear < currentYear - 2 ? (
+                            <>
+                            Completed <strong>{edu.degree}</strong> from {edu.institution} in {edu.graduationYear} with a grade of <strong>{edu.grade}</strong>.
+                            </>
+                          ) : (
+                            <>
+                            Graduated with <strong>{edu.degree}</strong> from {edu.institution} in {edu.graduationYear} with a grade of <strong>{edu.grade}</strong>.
+                            </>
+                          )}
+                        </>
+                      </li>
+                    </p>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+  
+          {/* Work Experience - only render if workExperience array exists and has items */}
+          {resumeData?.workExperience && resumeData.workExperience.length > 0 && (
+            <div className="py-2 border-b border-gray-600">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Work Experience</h3>
+              <div className="space-y-6">
+                {resumeData.workExperience.map((exp, index) => {
+                  let sentence = "";
+                  if (exp.endDate.toLowerCase() === "present") {
+                    sentence = `${exp.jobTitle} at ${exp.companyName} (${exp.location}) since ${exp.startDate}.`;
+                  } else {
+                    sentence = `${exp.jobTitle} at ${exp.companyName} (${exp.location}) from ${exp.startDate} to ${exp.endDate}.`;
+                  }
+                  return (
+                    <div key={`exp-${index}`}>
+                      <p className="text-gray-700 font-bold"><li>{sentence}</li></p>
+                      <p className="text-gray-700">{exp.description}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* Certifications - only render if certifications array exists and has items */}
+          {resumeData?.certifications && resumeData.certifications.length > 0 && (
+            <div className="py-2">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Certifications</h3>
+              <div className="space-y-6">
+                {resumeData.certifications.map((cert, index) => (
+                  <p key={index} className="text-gray-700">
+                    <p className="font-bold">{cert.name}</p>{`issued by ${cert.issuer} on ${cert.date}.`}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="w-full flex flex-col pl-3">
+          {/* Skills - only render if skills exist */}
+          {resumeData?.skills && 
+            ((resumeData.skills.technical && resumeData.skills.technical.length > 0) || 
+             (resumeData.skills.soft && resumeData.skills.soft.length > 0)) && (
+            <div className="py-2 border-b border-gray-600">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Skills</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {resumeData.skills.technical && resumeData.skills.technical.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-gray-700">Technical Skills</h4>
+                    <ul className="list-disc list-inside text-gray-700">
+                      {resumeData.skills.technical.map((skill, index) => (
+                        <li key={index}>{skill}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {resumeData.skills.soft && resumeData.skills.soft.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-gray-700">Soft Skills</h4>
+                    <ul className="list-disc list-inside text-gray-700">
+                      {resumeData.skills.soft.map((skill, index) => (
+                        <li key={index}>{skill}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+  
+          {/* Projects - only render if projects array exists and has items */}
+          {resumeData?.projects && resumeData.projects.length > 0 && (
+            <div className="py-2 border-b border-gray-600">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Projects</h3>
+              <div className="space-y-6">
+                {resumeData.projects.map((project, index) => (
+                  <p key={index} className="text-gray-700">
+                    <p className="font-bold">{project.name}:</p>{`${project.description}`}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+  
+          {/* Achievements - only render if achievements array exists and has items */}
+          {resumeData?.achievements && resumeData.achievements.length > 0 && (
+            <div className="py-2">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Achievements</h3>
+              <div className="space-y-6">
+                {resumeData.achievements.map((ach, index) => (
+                  <p key={index} className="text-gray-700">
+                    <p className="font-bold">{ach.name}</p>{`issued by ${ach.issuer} on ${ach.date}.`}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

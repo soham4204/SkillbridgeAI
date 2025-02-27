@@ -5,7 +5,7 @@ import {
   Snackbar, Alert 
 } from "@mui/material";
 import { db } from "../firebase-config";
-import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../firebase-config";
 
@@ -55,11 +55,9 @@ const PostJob = ({ employerId }) => {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Get the current user ID (assuming you're using Firebase Authentication)
+  
     const userId = auth.currentUser?.uid;
-    
-    // Check if user is authenticated
+  
     if (!userId) {
       setSnackbar({ 
         open: true, 
@@ -68,46 +66,81 @@ const PostJob = ({ employerId }) => {
       });
       return;
     }
-    
+  
+    if (!jobTitle) {
+      setSnackbar({
+        open: true,
+        message: "Error: Job title is required",
+        severity: "error",
+      });
+      return;
+    }
+  
     try {
+      // Debug employerId
+      if (!userId) {
+        console.error("Error: employerId is missing!");
+        setSnackbar({
+          open: true,
+          message: "Error: Employer details not found",
+          severity: "error",
+        });
+        return;
+      }
+  
+      const employerRef = doc(db, "employers", userId);
+      const employerSnap = await getDoc(employerRef);
+  
+      if (!employerSnap.exists()) {
+        setSnackbar({
+          open: true,
+          message: "Error: Employer details not found",
+          severity: "error",
+        });
+        return;
+      }
+  
+      const employerData = employerSnap.data();
+      const companyName = employerData?.companyName || "Unknown Company";
+  
+      const jobCategory = jobCategories[jobTitle] || "Other";
+  
       const jobData = {
         jobTitle,
         jobDescription,
-        category: jobCategories[jobTitle] || '',
+        companyName,
+        category: jobCategory,
         salary,
         jobType,
-        requiredSkills: skills,
-        userId: userId,  // Store the current user's ID
-        status: "active", // Set the status as active
-        datePosted: new Date().toISOString()
+        requiredSkills: skills || [],
+        userId,
+        status: "active",
+        datePosted: new Date().toISOString(),
       };
   
-      // Add job document to Firestore
-      const docRef = await addDoc(collection(db, "jobs"), jobData);
+      // Debugging console logs
+      console.log("Submitting Job Data:", jobData);
   
-      // Update the job document with its own ID
-      await updateDoc(doc(db, "jobs", docRef.id), {
-        jobId: docRef.id
-      });
+      await addDoc(collection(db, "jobs"), jobData);
   
-      setSnackbar({ 
-        open: true, 
-        message: 'Job posted successfully!', 
-        severity: 'success' 
+      setSnackbar({
+        open: true,
+        message: "Job posted successfully!",
+        severity: "success",
       });
   
       resetForm();
-      
+      navigate("/dashboard");
     } catch (error) {
-      console.error("Error posting job: ", error);
-      setSnackbar({ 
-        open: true, 
-        message: `Error posting job: ${error.message}`, 
-        severity: 'error' 
+      console.error("Error posting job:", error);
+      setSnackbar({
+        open: true,
+        message: "Error posting job. Please try again.",
+        severity: "error",
       });
     }
   };
-
+  
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };

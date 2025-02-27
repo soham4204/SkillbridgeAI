@@ -125,7 +125,7 @@ const JobCard = ({ job }) => {
 
   // Format salary to include commas and currency symbol
   const formatSalary = (salary) => {
-    return salary ? `$${salary.toLocaleString()}` : "Not disclosed";
+    return salary ? `₹${salary.toLocaleString()}` : "Not disclosed";
   };
 
   return (
@@ -134,8 +134,16 @@ const JobCard = ({ job }) => {
         <div>
           <h3 className="text-xl font-semibold text-gray-800">{job.jobTitle}</h3>
           <p className="text-gray-600 font-medium">{job.companyName}</p>
-          <div className="flex items-center mt-1 text-gray-500">
-          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+          {job.requiredSkills && job.requiredSkills.map((skill, index) => (
+            <span
+              key={index}
+              className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
         </div>
         <div className="flex flex-col items-end">
           <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -155,17 +163,7 @@ const JobCard = ({ job }) => {
       </div>
 
       <div className="mt-4">
-        <div className="flex flex-wrap gap-2 mt-3">
-          {job.requiredSkills && job.requiredSkills.map((skill, index) => (
-            <span
-              key={index}
-              className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
-            >
-              {skill}
-            </span>
-          ))}
-        </div>
-
+        
         <div className="mt-4 flex justify-between items-center">
           <div className="text-gray-700 font-medium">
             {formatSalary(job.salary)} <span className="text-gray-500 font-normal">per year</span>
@@ -180,7 +178,6 @@ const JobCard = ({ job }) => {
         </div>
       </div>
 
-      {/* Expanded content */}
       {expanded && (
         <div className="mt-6 border-t pt-4 animate-fadeIn">
           <h4 className="font-medium text-gray-800 mb-2">Job Description</h4>
