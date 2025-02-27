@@ -7,7 +7,7 @@ import ManageJobs from "../components/ManageJobs";
 import EmployerProfile from "../components/EmployerProfile";
 
 const EmployerDashboard = () => {
-    const [activePage, setActivePage] = useState("dashboard");
+    const [activePage, setActivePage] = useState("profile");
 
     const renderComponent = () => {
         switch (activePage) {
