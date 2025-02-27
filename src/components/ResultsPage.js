@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Box, Paper, Typography, Button, Divider, CircularProgress, List, ListItem, ListItemText, ListItemIcon } from "@mui/material";
-import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion, Timestamp, setDoc } from "firebase/firestore";
 import { db, auth } from "../firebase-config";
 
 const ResultsPage = () => {
   const [result, setResult] = useState(null);
   const [job, setJob] = useState(null);
+  const [employer, setEmployer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
@@ -15,23 +16,53 @@ const ResultsPage = () => {
   const { testId, jobId } = useParams();
 
   useEffect(() => {
-    const fetchTestResult = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
+        
         // Get the test result
         const resultDoc = await getDoc(doc(db, "tests", testId));
         if (resultDoc.exists()) {
           setResult(resultDoc.data());
         } else {
           setError("Test result not found");
+          return;
         }
         
         // Get the job details
         const jobDoc = await getDoc(doc(db, "jobs", jobId));
         if (jobDoc.exists()) {
-          setJob(jobDoc.data());
+          const jobData = jobDoc.data();
+          setJob(jobData);
+          
+          // Fetch employer details
+          if (jobData.employerId) {
+            const employerDoc = await getDoc(doc(db, "employers", jobData.employerId));
+            if (employerDoc.exists()) {
+              const employerData = employerDoc.data();
+              setEmployer(employerData);
+              
+              // Update job with company name
+              setJob(prev => ({
+                ...prev,
+                companyName: employerData.companyName || "Unknown Company"
+              }));
+            }
+          }
+          
+          // Check if user has already applied for this job
+          if (auth.currentUser) {
+            const candidateDoc = await getDoc(doc(db, "candidates", auth.currentUser.uid));
+            if (candidateDoc.exists()) {
+              const appliedJobs = candidateDoc.data().appliedJobs || [];
+              if (appliedJobs.some(job => job.jobId === jobId)) {
+                setApplied(true);
+              }
+            }
+          }
         } else {
           setError("Job not found");
+          return;
         }
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -41,34 +72,56 @@ const ResultsPage = () => {
       }
     };
 
-    fetchTestResult();
+    fetchData();
   }, [testId, jobId]);
 
   const handleApplyForJob = async () => {
-    if (!auth.currentUser || !job) return;
+    if (!auth.currentUser || !job) {
+      setError("You must be logged in to apply");
+      return;
+    }
     
     try {
       setApplying(true);
       
-      // Update user's applied jobs in their profile
-      const userDocRef = doc(db, "candidates", auth.currentUser.uid);
-      await updateDoc(userDocRef, {
-        appliedJobs: arrayUnion({
-          jobId,
-          jobTitle: job.jobTitle,
-          companyName: job.companyName,
-          appliedAt: Timestamp.now(),
-          testId,
-          testScore: result.percentage
-        })
-      });
+      const candidateId = auth.currentUser.uid;
+      const employerId = job.employerId;
+      const companyName = employer?.companyName || job.companyName || "Unknown Company";
+      const applicationData = {
+        jobId,
+        jobTitle: job.jobTitle,
+        companyName,
+        employerId,
+        appliedAt: Timestamp.now(),
+        testId,
+        testScore: result.percentage
+      };
       
-      // Update job's applicants list
+      // 1. Update candidate's profile with the applied job
+      const candidateDocRef = doc(db, "candidates", candidateId);
+      const candidateDoc = await getDoc(candidateDocRef);
+      
+      if (!candidateDoc.exists()) {
+        // Create a new candidate document if it doesn't exist
+        await setDoc(candidateDocRef, {
+          name: auth.currentUser.displayName || auth.currentUser.email,
+          email: auth.currentUser.email,
+          appliedJobs: [applicationData]
+        });
+      } else {
+        // Update the existing candidate document
+        await updateDoc(candidateDocRef, {
+          appliedJobs: arrayUnion(applicationData)
+        });
+      }
+      
+      // 2. Update the job listing with the new applicant
       const jobDocRef = doc(db, "jobs", jobId);
       await updateDoc(jobDocRef, {
         applicants: arrayUnion({
-          userId: auth.currentUser.uid,
+          userId: candidateId,
           name: auth.currentUser.displayName || auth.currentUser.email,
+          email: auth.currentUser.email,
           appliedAt: Timestamp.now(),
           testId,
           testScore: result.percentage
@@ -84,11 +137,14 @@ const ResultsPage = () => {
       
     } catch (err) {
       console.error("Error applying for job:", err);
-      setError("Failed to apply for the job. Please try again.");
+      setError(`Failed to apply for the job: ${err.message || "Unknown error"}`);
     } finally {
       setApplying(false);
     }
   };
+
+  // Rest of your component remains the same
+  // ... loading, error handling, recommended courses, etc.
 
   const recommendedCourses = [
     { title: "Machine Learning Fundamentals", provider: "Coursera", url: "https://coursera.org/ml-fundamentals" },
@@ -195,7 +251,7 @@ const ResultsPage = () => {
                 <strong>Position:</strong> {job?.jobTitle}
               </Typography>
               <Typography variant="body1">
-                <strong>Company:</strong> {job?.companyName}
+                <strong>Company:</strong> {job?.companyName || employer?.companyName || "Unknown Company"}
               </Typography>
               <Typography variant="body1">
                 <strong>Required Score:</strong> 60%
@@ -212,11 +268,11 @@ const ResultsPage = () => {
                   variant="contained"
                   color="primary"
                   size="large"
-                  disabled={applying}
+                  disabled={applying || applied}
                   onClick={handleApplyForJob}
                   sx={{ py: 1.5, px: 4 }}
                 >
-                  {applying ? "Applying..." : "Apply for this Job"}
+                  {applying ? "Applying..." : applied ? "Already Applied" : "Apply for this Job"}
                 </Button>
               </Box>
             ) : (
@@ -250,12 +306,6 @@ const ResultsPage = () => {
                     onClick={() => navigate("/jobseeker-dashboard")}
                   >
                     Back to Dashboard
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    onClick={() => navigate(`/competency-test/${jobId}`)}
-                  >
-                    Retake Test
                   </Button>
                 </Box>
               </Box>

@@ -1,23 +1,13 @@
 import React, { useState } from "react";
 import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  MenuItem, 
-  Select, 
-  FormControl, 
-  InputLabel, 
-  Paper, 
-  Chip, 
-  Grid, 
-  Container,
-  Snackbar,
-  Alert
+  Box, Button, TextField, Typography, MenuItem, Select, 
+  FormControl, InputLabel, Paper, Chip, Grid, Container, 
+  Snackbar, Alert 
 } from "@mui/material";
 import { db } from "../firebase-config";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { auth } from "../firebase-config";
 
 const jobCategories = {
   "Software Engineer": "Software Development",
@@ -31,7 +21,7 @@ const jobCategories = {
 
 const jobRoles = Object.keys(jobCategories);
 
-const PostJob = () => {
+const PostJob = ({ employerId }) => {
   const navigate = useNavigate();
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -65,6 +55,20 @@ const PostJob = () => {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Get the current user ID (assuming you're using Firebase Authentication)
+    const userId = auth.currentUser?.uid;
+    
+    // Check if user is authenticated
+    if (!userId) {
+      setSnackbar({ 
+        open: true, 
+        message: 'Error: User not authenticated', 
+        severity: 'error' 
+      });
+      return;
+    }
+    
     try {
       const jobData = {
         jobTitle,
@@ -73,30 +77,32 @@ const PostJob = () => {
         salary,
         jobType,
         requiredSkills: skills,
+        userId: userId,  // Store the current user's ID
+        status: "active", // Set the status as active
         datePosted: new Date().toISOString()
       };
-
-      await addDoc(collection(db, "jobs"), jobData);
-      
+  
+      // Add job document to Firestore
+      const docRef = await addDoc(collection(db, "jobs"), jobData);
+  
+      // Update the job document with its own ID
+      await updateDoc(doc(db, "jobs", docRef.id), {
+        jobId: docRef.id
+      });
+  
       setSnackbar({ 
         open: true, 
         message: 'Job posted successfully!', 
         severity: 'success' 
       });
-      
-      // Reset the form
+  
       resetForm();
-      
-      // Show success message for 2 seconds before navigating
-      setTimeout(() => {
-        navigate('/manage-jobs');
-      }, 2000);
       
     } catch (error) {
       console.error("Error posting job: ", error);
       setSnackbar({ 
         open: true, 
-        message: 'Error posting job', 
+        message: `Error posting job: ${error.message}`, 
         severity: 'error' 
       });
     }

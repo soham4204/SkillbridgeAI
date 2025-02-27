@@ -17,7 +17,7 @@ const EmployerProfile = () => {
     headquarters: '',
     website: '',
     about: '',
-    locations: [],
+    location: '',
     socialLinks: {
       linkedin: '',
       twitter: ''

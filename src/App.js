@@ -20,6 +20,8 @@ import JobListings from "./components/JobListings";
 import AIMLtest from "./components/tests/AIML";
 import JobDetails from "./routes/JobDetails";
 import ResultsPage from "./components/ResultsPage";
+import CreateProfile from "./routes/GetStarted";
+import SuccessStories from "./routes/SuccessStories";
 
 const theme = createTheme({
   palette: {
@@ -49,6 +51,8 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/jobseeker-dashboard" element={<JobseekerDashboard />} />
             <Route path="/employer-dashboard" element={<EmployerDashboard />} />
+            <Route path="/instructional-videos" element={<InstructionalVideosPage />} />
+            <Route path="/success-stories" element={<SuccessStories />} />
             <Route path="/resume-builder" element={<ResumeBuilder />} />
             <Route path="/resume-viewer" element={<ResumeViewer />} />
             <Route path="/resume-upload" element={<ResumeUpload />} />
@@ -61,6 +65,7 @@ function App() {
             <Route path="/job/:jobRole" element={<JobDetails />} />
             <Route path="/competency-test/:jobId" element={<AIMLtest />} />
             <Route path="/test-results/:testId/:jobId" element={<ResultsPage />} />
+            <Route path="/get-started" element={<CreateProfile />} />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>

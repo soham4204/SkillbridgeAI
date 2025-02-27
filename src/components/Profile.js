@@ -17,24 +17,15 @@ const ProfilePage = ({ userId }) => {
     "endDate",
     "location",
     "description",
-    ];
+  ];
   const projectorder = [
     "name", 
     "description", 
     "role", 
     "technologies"
-    ];
-//   const certificationorder = [
-//     "name", 
-//     "issuer", 
-//     "date"
-//     ];
-//   const achievementorder = [
-//     "name", 
-//     "issuer", 
-//     "date"
-//     ];
+  ];
   const [formData, setFormData] = useState({
+    profilePicture: "",
     contactInformation: {
       fullName: "",
       phoneNumber: "",
@@ -92,6 +83,7 @@ const ProfilePage = ({ userId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -232,6 +224,110 @@ const ProfilePage = ({ userId }) => {
     return emptyItems[section] || {};
   };
 
+  // Cloudinary image upload handler
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a valid image file (JPEG, PNG, or GIF)');
+      return;
+    }
+
+    setImageUploading(true);
+    setError(null);
+
+    try {
+      // Create FormData to send to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'profile_pictures');
+      formData.append('folder', `user-profiles/${userId}`);
+
+      // Call Cloudinary API
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/dihawgvdz/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      
+      // Update the profile picture URL in the form data
+      setFormData((prev) => ({
+        ...prev,
+        profilePicture: data.secure_url,
+      }));
+
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      setError('Failed to upload image. Please try again.');
+    } finally {
+      setImageUploading(false);
+    }
+  };
+  console.log("Cloud name:", process.env.REACT_APP_CLOUDINARY_CLOUD_NAME);
+console.log("Upload preset:", process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET);
+
+  const ProfilePicture = () => {
+    return (
+      <div className="mb-6">
+        <h3 className="text-lg font-medium mb-2">Profile Picture</h3>
+        <div className="flex items-center space-x-4">
+          <div className="w-32 h-40 relative overflow-hidden border-2 border-gray-300">
+            {formData.profilePicture ? (
+              <img 
+                src={formData.profilePicture} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <span className="text-gray-400">No Image</span>
+              </div>
+            )}
+          </div>
+          
+          {isEditing && (
+            <div className="flex flex-col">
+              <label 
+                htmlFor="profile-upload" 
+                className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded cursor-pointer"
+              >
+                {imageUploading ? 'Uploading...' : 'Upload Photo'}
+              </label>
+              <input
+                id="profile-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={imageUploading}
+              />
+              {formData.profilePicture && (
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, profilePicture: "" }))}
+                  className="mt-2 text-red-500 text-sm hover:text-red-700"
+                >
+                  Remove Photo
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        {error && <p className="text-red-500 mt-2">{error}</p>}
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Error Message */}
@@ -277,6 +373,13 @@ const ProfilePage = ({ userId }) => {
             </button>
           )}
         </div>
+      </div>
+
+      <div className="mb-6">
+        {/* Contact Information */}
+        <section className="bg-white p-6 rounded-lg shadow">
+        <ProfilePicture />
+        </section>
       </div>
 
       <div className="space-y-8">

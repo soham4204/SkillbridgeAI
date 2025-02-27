@@ -2,7 +2,23 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db, auth } from "../firebase-config";
-import Icons from "./Icons";
+
+import { 
+  MapPinIcon, 
+  CheckIcon, 
+  ChevronDownIcon, 
+  DocumentCheckIcon, 
+  ExclamationTriangleIcon 
+} from '@heroicons/react/24/outline';
+
+// Export an object with named icon components
+const Icons = {
+  MapPin: (props) => <MapPinIcon {...props} />,
+  Check: (props) => <CheckIcon {...props} />,
+  ChevronDown: (props) => <ChevronDownIcon {...props} />,
+  FileCheck: (props) => <DocumentCheckIcon {...props} />,
+  AlertTriangle: (props) => <ExclamationTriangleIcon {...props} />
+};
 
 const JobCard = ({ job }) => {
   const [expanded, setExpanded] = useState(false);
@@ -119,8 +135,6 @@ const JobCard = ({ job }) => {
           <h3 className="text-xl font-semibold text-gray-800">{job.jobTitle}</h3>
           <p className="text-gray-600 font-medium">{job.companyName}</p>
           <div className="flex items-center mt-1 text-gray-500">
-            <Icons.MapPin className="w-4 h-4 mr-1" />
-            <span>{job.locations ? job.locations.join(", ") : "Remote"}</span>
           </div>
         </div>
         <div className="flex flex-col items-end">

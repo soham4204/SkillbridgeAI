@@ -53,7 +53,7 @@ const SignupPage = () => {
         try {
             await createUserWithEmailAndPassword(auth, email, password);
             if (role === 'jobseeker') {
-                navigate('/jobseeker-dashboard');
+                navigate('/get-started');
             } else if (role === 'employer') {
                 navigate('/employer-dashboard');
             } else if (role === 'collaborator') {
