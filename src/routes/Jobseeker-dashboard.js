@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { auth, db } from "../firebase-config"; // Make sure to import db
-import { collection, getDocs, where, query } from "firebase/firestore";
+import { db } from "../firebase-config"; // Make sure to import db
+import { collection, getDocs, getDoc,doc, where, query } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import JobCard from "../components/JobCard";
 import SearchBar from "../components/SearchBar";
@@ -9,6 +9,8 @@ import MyResume from "../components/MyResume";
 import ProgressPage from "../components/Progress";
 import AppliedJobsPage from "../components/AppliedJobs";
 import ProfilePage from "../components/Profile";
+import SkillAnalyzer from "../components/skillAnalyzer";
+import { getAuth } from "firebase/auth";
 
 const JobseekerDashboard = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -17,8 +19,36 @@ const JobseekerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredJobs, setFilteredJobs] = useState([]);
-  
+  const [userProfile, setUserProfile] = useState(null);
   const navigate = useNavigate();
+  const auth = getAuth();
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!auth.currentUser) {
+        console.error("User not authenticated");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userRef = doc(db, "userProfiles", auth.currentUser.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          setUserProfile(userSnap.data());
+        } else {
+          console.error("User profile not found");
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   // Auth state listener
   useEffect(() => {
@@ -109,10 +139,14 @@ const JobseekerDashboard = () => {
         return <MainContent />;
     }
   };
+  console.log("currentUser", currentUser);
+  console.log("API Key:", process.env.REACT_APP_GOOGLE_API_KEY);
 
   const MainContent = () => {
     return (
       <div className="p-6">
+
+        <SkillAnalyzer userProfile={userProfile}/>
         <SearchBar onSearch={handleSearch} />
         
         {loading ? (

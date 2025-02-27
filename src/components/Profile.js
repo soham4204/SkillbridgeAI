@@ -84,6 +84,9 @@ const ProfilePage = ({ userId }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [imageUploading, setImageUploading] = useState(false);
+  const [newTechnicalSkill, setNewTechnicalSkill] = useState("");
+  const [newSoftSkill, setNewSoftSkill] = useState("");
+
 
   useEffect(() => {
     if (!userId) return;
@@ -119,21 +122,21 @@ const ProfilePage = ({ userId }) => {
       setError("No user ID provided");
       return;
     }
-
+  
     setLoading(true);
     setError(null);
-
+  
     try {
       const profileRef = doc(db, "userProfiles", userId);
       await setDoc(
         profileRef,
         {
-          ...formData,
+          skills: formData.skills, // Ensure skills are saved properly
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
       );
-
+  
       setIsEditing(false);
     } catch (err) {
       console.error("Error saving profile:", err);
@@ -142,11 +145,12 @@ const ProfilePage = ({ userId }) => {
       setLoading(false);
     }
   };
+  
 
   const handleInputChange = (section, field, value, index = null) => {
     setFormData((prev) => {
       const newData = structuredClone(prev);
-
+  
       if (index !== null) {
         if (!Array.isArray(newData[section])) {
           newData[section] = [];
@@ -156,19 +160,18 @@ const ProfilePage = ({ userId }) => {
         }
         newData[section][index][field] = value;
       } else if (section === "skills") {
-        newData.skills[field] = value
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean);
+        // Ensure value is assigned directly when it is already an array
+        newData.skills[field] = Array.isArray(value) ? value : value.split(",").map((item) => item.trim()).filter(Boolean);
       } else if (section === "contactInformation") {
         newData.contactInformation[field] = value;
       } else {
         newData[section] = value;
       }
-
+  
       return newData;
     });
   };
+  
 
   const addItem = (section) => {
     setFormData((prev) => {
@@ -382,6 +385,39 @@ const handleCertificationUpload = async (index, e) => {
     );
   };
 
+  const addSkill = (category, skill) => {
+    if (!skill.trim()) return;
+  
+    setFormData((prev) => ({
+      ...prev,
+      skills: {
+        ...prev.skills,
+        [category]: [...(prev.skills[category] || []), skill.trim()],
+      },
+    }));
+  
+    // Clear input after adding
+    if (category === "technical") {
+      setNewTechnicalSkill("");
+    } else {
+      setNewSoftSkill("");
+    }
+  };
+
+  const removeSkill = (category, index) => {
+    setFormData((prev) => {
+      const updatedSkills = prev.skills[category].filter((_, i) => i !== index);
+      return {
+        ...prev,
+        skills: {
+          ...prev.skills,
+          [category]: updatedSkills,
+        },
+      };
+    });
+  };
+  
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Error Message */}
@@ -487,56 +523,94 @@ const handleCertificationUpload = async (index, e) => {
 
         {/* Skills */}
         <section className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">Skills</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Technical Skills
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.skills && formData.skills.technical ? formData.skills.technical.join(", ") : ""}
-                  onChange={(e) => {
-                    const skillsArray = e.target.value.split(",").map(skill => skill.trim()).filter(Boolean);
-                    handleInputChange("skills", "technical", skillsArray);
-                  }}
-                  className="w-full p-2 border rounded"
-                  placeholder="Separate skills with commas"
-                />
-              ) : (
-                <p className="text-gray-800">
-                  {formData.skills && formData.skills.technical && formData.skills.technical.length > 0 
-                    ? formData.skills.technical.join(", ") 
-                    : "No technical skills listed"}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Soft Skills
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={formData.skills && formData.skills.soft ? formData.skills.soft.join(", ") : ""}
-                  onChange={(e) => {
-                    const skillsArray = e.target.value.split(",").map(skill => skill.trim()).filter(Boolean);
-                    handleInputChange("skills", "soft", skillsArray);
-                  }}
-                  className="w-full p-2 border rounded"
-                  placeholder="Separate skills with commas"
-                />
-              ) : (
-                <p className="text-gray-800">
-                  {formData.skills && formData.skills.soft && formData.skills.soft.length > 0 
-                    ? formData.skills.soft.join(", ") 
-                    : "No soft skills listed"}
-                </p>
-              )}
-            </div>
-          </div>
-        </section>
+  <h2 className="text-2xl font-semibold mb-4">Skills</h2>
+
+  {/* Technical Skills */}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Technical Skills
+    </label>
+    
+    {formData.skills.technical && formData.skills.technical.length > 0 ? (
+      <ul className="mb-2">
+        {formData.skills.technical.map((skill, index) => (
+          <li key={index} className="flex items-center justify-between bg-gray-100 p-2 rounded my-1">
+            {skill}
+            <button
+              onClick={() => removeSkill("technical", index)}
+              className="ml-2 text-red-600 hover:text-red-800"
+            >
+              ❌
+            </button>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-gray-500">No technical skills listed</p>
+    )}
+
+    {isEditing && (
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={newTechnicalSkill}
+          onChange={(e) => setNewTechnicalSkill(e.target.value)}
+          className="w-full p-2 border rounded"
+          placeholder="Enter a skill"
+        />
+        <button
+          onClick={() => addSkill("technical", newTechnicalSkill)}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Add
+        </button>
+      </div>
+    )}
+  </div>
+
+  {/* Soft Skills */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Soft Skills
+    </label>
+
+    {formData.skills.soft && formData.skills.soft.length > 0 ? (
+      <ul className="mb-2">
+        {formData.skills.soft.map((skill, index) => (
+          <li key={index} className="flex items-center justify-between bg-gray-100 p-2 rounded my-1">
+            {skill}
+            <button
+              onClick={() => removeSkill("soft", index)}
+              className="ml-2 text-red-600 hover:text-red-800"
+            >
+              ❌
+            </button>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-gray-500">No soft skills listed</p>
+    )}
+
+    {isEditing && (
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={newSoftSkill}
+          onChange={(e) => setNewSoftSkill(e.target.value)}
+          className="w-full p-2 border rounded"
+          placeholder="Enter a skill"
+        />
+        <button
+          onClick={() => addSkill("soft", newSoftSkill)}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Add
+        </button>
+      </div>
+    )}
+  </div>
+</section>
 
         {/* Education */}
         <section className="bg-white p-6 rounded-lg shadow">
