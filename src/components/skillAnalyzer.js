@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { analyzeCareerPaths, getCourseRecommendations } from '../services/genaiService';
 import { getJobRolesSkills, getUserProfile } from '../services/firebaseService';  
-import { auth } from '../firebase-config'; // Firebase auth to get current user
+import { auth } from '../firebase-config'; 
+import CourseView from './CourseView';
 
 const SkillAnalyzer = () => {
   const [loading, setLoading] = useState(true);
@@ -21,14 +22,14 @@ const SkillAnalyzer = () => {
     const fetchUserSkills = async () => {
       try {
         setLoading(true);
-        const currentUser = auth.currentUser; // Get logged-in user
+        const currentUser = auth.currentUser; 
         
         if (!currentUser) {
           setError("User not logged in");
           return;
         }
 
-        const userProfile = await getUserProfile(currentUser.uid); // Fetch user profile by UID
+        const userProfile = await getUserProfile(currentUser.uid); 
         
         if (!userProfile || !userProfile.skills || !userProfile.skills.technical) {
           setError("No skills found in user profile");
@@ -215,74 +216,15 @@ const SkillAnalyzer = () => {
     );
   };
 
-  // Course card component
-  const CourseCard = ({ course, level }) => {
-    const levelColors = {
-      beginner: 'border-blue-200 bg-blue-50',
-      intermediate: 'border-green-200 bg-green-50',
-      advanced: 'border-purple-200 bg-purple-50'
-    };
-    
-    const levelBadgeColors = {
-      beginner: 'bg-blue-500',
-      intermediate: 'bg-green-500',
-      advanced: 'bg-purple-500'
-    };
-    
-    return (
-      <div className={`border-2 rounded-lg overflow-hidden shadow-md transition-all hover:shadow-lg ${levelColors[level]}`}>
-        <div className="p-5">
-          <div className="flex justify-between items-start">
-            <div className="flex flex-col">
-              <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full text-white mb-2 ${levelBadgeColors[level]}`}>
-                {level.charAt(0).toUpperCase() + level.slice(1)}
-              </span>
-              {course.skill && (
-                <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-gray-200 text-gray-700 mb-2">
-                  {course.skill}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              <span className="ml-1 text-gray-700">{course.rating}</span>
-            </div>
-          </div>
-          
-          <h4 className="text-lg font-bold mb-2 text-gray-800">{course.title}</h4>
-          
-          <p className="text-gray-600 mb-4 text-sm line-clamp-2">{course.description}</p>
-          
-          <div className="flex items-center text-sm text-gray-500 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {course.duration}
-          </div>
-          
-          <div className="flex items-center mb-4">
-            <span className="text-sm font-medium bg-gray-200 text-gray-800 px-2 py-1 rounded">
-              {course.provider}
-            </span>
-          </div>
-          
-          <a href="#" className="block w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors text-center">
-            View Course
-          </a>
-        </div>
-      </div>
-    );
-  };
+const CourseCard = ({ course, level }) => {
+  return (
+    <CourseView course={course} role={currentRole} />
+  );
+};
 
   return (
     <>
       <div className="container mx-auto p-4 max-w-7xl">
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6 mb-8 rounded-xl shadow-lg">
-          <h2 className="text-3xl font-bold mb-2">Your Career Path Analysis</h2>
-          <p className="text-blue-100">Discover the best career paths based on your current skills and where to focus your learning.</p>
-        </div>
         
         <div className="bg-white p-6 rounded-xl shadow-md mb-8">
           <h3 className="text-xl font-bold mb-4 text-gray-800">Your Current Technical Skills</h3>
@@ -302,7 +244,7 @@ const SkillAnalyzer = () => {
                 <div className="flex justify-between items-center">
                   <h3 className="text-2xl font-bold text-gray-800">{path.role}</h3>
                   <div className="relative w-20 h-20">
-                    <svg viewBox="0 0 36 36" className="w-20 h-20 transform -rotate-90">
+                    <svg viewBox="0 0 36 36" className="w-20 h-20 transform -rotate">
                       <path
                         d="M18 2.0845
                           a 15.9155 15.9155 0 0 1 0 31.831

@@ -11,6 +11,8 @@ import AppliedJobsPage from "../components/AppliedJobs";
 import ProfilePage from "../components/Profile";
 import SkillAnalyzer from "../components/skillAnalyzer";
 import { getAuth } from "firebase/auth";
+import CourseCompletionCheck from "../components/CourseCompletionCheck";
+import SkillsVerification from "../components/SkillsVerification";
 
 const JobseekerDashboard = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -142,10 +144,26 @@ const JobseekerDashboard = () => {
   console.log("currentUser", currentUser);
   console.log("API Key:", process.env.REACT_APP_GOOGLE_API_KEY);
 
+  const [technicalSkills, setTechnicalSkills] = useState([
+    "Machine Learning", "Python", "Data Science", "Deep Learning", "TensorFlow"
+  ]);
+  const [verifiedSkills, setVerifiedSkills] = useState([]);
+
+  const handleSkillsVerified = (updatedVerifiedSkills) => {
+    setVerifiedSkills(updatedVerifiedSkills);
+    // You might want to refresh other data after skills verification
+  };
+
   const MainContent = () => {
     return (
       <div className="p-6">
-
+        <div className="bg-white p-6 rounded-xl shadow-md mb-8">
+        <SkillsVerification 
+          technicalSkills={technicalSkills} 
+          onSkillsVerified={handleSkillsVerified} 
+        />
+      </div>
+        <CourseCompletionCheck />
         <SkillAnalyzer userProfile={userProfile}/>
         <SearchBar onSearch={handleSearch} />
         
