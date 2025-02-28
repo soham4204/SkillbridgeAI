@@ -131,7 +131,7 @@ const ProfilePage = ({ userId }) => {
       await setDoc(
         profileRef,
         {
-          skills: formData.skills, // Ensure skills are saved properly
+          ...formData, // Save the entire formData object
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -228,60 +228,75 @@ const ProfilePage = ({ userId }) => {
   };
 
   // Add this function to handle certificate image uploads
-const handleCertificationUpload = async (index, e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-  if (!allowedTypes.includes(file.type)) {
-    setError('Please upload a valid image file (JPEG, PNG, or GIF)');
-    return;
-  }
-
-  setImageUploading(true);
-  setError(null);
-
-  try {
-    // Create FormData to send to Cloudinary
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'profile_pictures');
-    formData.append('folder', `user-profiles/${userId}/certifications`);
-
-    // Call Cloudinary API
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/dihawgvdz/image/upload`,
-      {
-        method: 'POST',
-        body: formData,
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to upload image');
+  const handleCertificationUpload = async (index, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a valid image file (JPEG, PNG, or GIF)');
+      return;
     }
-
-    const data = await response.json();
-    
-    // Update the certification image URL
-    const updatedCertifications = [...formData.certifications];
-    updatedCertifications[index] = {
-      ...updatedCertifications[index],
-      imageUrl: data.secure_url,
-    };
-    
-    setFormData({
-      ...formData,
-      certifications: updatedCertifications,
-    });
-
-  } catch (err) {
-    console.error('Error uploading image:', err);
-    setError('Failed to upload image. Please try again.');
-  } finally {
-    setImageUploading(false);
-  }
-};
+  
+    setImageUploading(true);
+    setError(null);
+  
+    try {
+      // Create FormData to send to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'profile_pictures');
+      formData.append('folder', `user-profiles/${userId}/certifications`);
+  
+      // Add logging to track what's being sent
+      console.log("Uploading to Cloudinary:", {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        userId: userId,
+        index: index
+      });
+  
+      // Call Cloudinary API
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/dihawgvdz/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+  
+      // Improved error handling
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Cloudinary API error response:", errorText);
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      }
+  
+      const data = await response.json();
+      console.log("Cloudinary upload successful:", data.secure_url);
+      
+      // Update the certification image URL - fixed to use the state's formData not the local parameter
+      setFormData((prevFormData) => {
+        const updatedCertifications = [...prevFormData.certifications];
+        updatedCertifications[index] = {
+          ...updatedCertifications[index],
+          imageUrl: data.secure_url,
+        };
+        
+        return {
+          ...prevFormData,
+          certifications: updatedCertifications,
+        };
+      });
+  
+    } catch (err) {
+      console.error('Error uploading certification image:', err);
+      setError(`Failed to upload image: ${err.message}. Please try again.`);
+    } finally {
+      setImageUploading(false);
+    }
+  };
 
   // Cloudinary image upload handler
   const handleImageUpload = async (e) => {

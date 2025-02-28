@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase-config";
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaPalette, FaFont, FaDownload } from "react-icons/fa";
 import { toPng } from "html-to-image";
@@ -11,6 +11,8 @@ const ResumeBuilder = ({ userId }) => {
   const [selectedTemplate, setSelectedTemplate] = useState("modern");
   const [selectedFont, setSelectedFont] = useState("inter");
   const resumeRef = useRef(null);
+  const [showComparison, setShowComparison] = useState(false);
+  const [previousResumeData, setPreviousResumeData] = useState(null);
 
   const templates = {
     modern: {
@@ -46,203 +48,237 @@ const ResumeBuilder = ({ userId }) => {
     }
   };
 
+  const handleCompareResume = () => {
+    // Get previous resume data from local storage
+    const storedPreviousResume = localStorage.getItem(`previous-resume-${userId}`);
+    
+    if (storedPreviousResume) {
+      setPreviousResumeData(JSON.parse(storedPreviousResume));
+      setShowComparison(true);
+    } else {
+      // Handle case where no previous resume exists
+      alert("No previous version available for comparison");
+    }
+  };
+
+  const handleFetchPreviousVersion = async () => {
+    try {
+      // Assuming you have a collection for storing previous versions
+      const prevVersionRef = doc(db, "userProfileHistory", userId);
+      const prevDocSnap = await getDoc(prevVersionRef);
+      
+      if (prevDocSnap.exists()) {
+        setPreviousResumeData(prevDocSnap.data());
+        setShowComparison(true);
+      } else {
+        alert("No previous version found");
+      }
+    } catch (error) {
+      console.error("Error fetching previous version:", error);
+    }
+  };
+
   const currentYear = new Date().getFullYear();
 
-  const ModernTemplate = () => (
-    <div 
-      id="resume-content" 
-      className="bg-white space-y-4"
-    >
-      {/* Header/Contact Information with Profile Picture */}
-      <div className="border-b border-gray-600 pb-2">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <h2 className="text-6xl font-bold text-gray-800 mb-2">
-              {resumeData?.contactInformation?.fullName}
-            </h2>
-            {resumeData?.professionalSummary && (
-              <p className="text-gray-600 mb-4 text-lg">
-                {resumeData?.professionalSummary}
-              </p>
+  const ModernTemplate = ({ resumeData }) => {
+    if (!resumeData) return <div>No resume data available</div>;
+    
+    return (
+      <div 
+        id="resume-content" 
+        className="bg-white space-y-4"
+      >
+        {/* Header/Contact Information with Profile Picture */}
+        <div className="border-b border-gray-600 pb-2">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <h2 className="text-6xl font-bold text-gray-800 mb-2">
+                {resumeData?.contactInformation?.fullName}
+              </h2>
+              {resumeData?.professionalSummary && (
+                <p className="text-gray-600 mb-4 text-lg">
+                  {resumeData?.professionalSummary}
+                </p>
+              )}
+            </div>
+            
+            {/* Profile Picture - only render if exists */}
+            {resumeData?.profilePicture && (
+              <div className="">
+                <img 
+                  src={resumeData?.profilePicture} 
+                  alt="Profile" 
+                  className="w-32 h-32 flex-shrink-0 overflow-hidden border-2 border-gray-300 rounded-md"
+                />
+              </div>
             )}
           </div>
-          
-          {/* Profile Picture - only render if exists */}
-          {resumeData?.profilePicture && (
-            <div className="">
-              <img 
-                src={resumeData?.profilePicture} 
-                alt="Profile" 
-                className="w-32 h-32 flex-shrink-0 overflow-hidden border-2 border-gray-300 rounded-md"
-              />
+    
+          {/* Contact information - only render if contact details exist */}
+          {(resumeData?.contactInformation?.email || 
+            resumeData?.contactInformation?.phoneNumber || 
+            resumeData?.contactInformation?.address) && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700 mt-4">
+              {resumeData?.contactInformation?.email && (
+                <p className="flex items-center">
+                  <FaEnvelope className="mr-2 text-blue-500" />
+                  {resumeData?.contactInformation?.email}
+                </p>
+              )}
+              {resumeData?.contactInformation?.phoneNumber && (
+                <p className="flex items-center">
+                  <FaPhone className="mr-2 text-blue-500" />
+                  {resumeData?.contactInformation?.phoneNumber}
+                </p>
+              )}
+              {resumeData?.contactInformation?.address && (
+                <p className="flex items-center">
+                  <FaMapMarkerAlt className="mr-2 text-blue-500" />
+                  {resumeData?.contactInformation?.address}
+                </p>
+              )}
             </div>
           )}
         </div>
-  
-        {/* Contact information - only render if contact details exist */}
-        {(resumeData?.contactInformation?.email || 
-          resumeData?.contactInformation?.phoneNumber || 
-          resumeData?.contactInformation?.address) && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700 mt-4">
-            {resumeData?.contactInformation?.email && (
-              <p className="flex items-center">
-                <FaEnvelope className="mr-2 text-blue-500" />
-                {resumeData?.contactInformation?.email}
-              </p>
+    
+        <div className="flex flex-row text-justify">
+          <div className="flex w-full flex-col pr-3 border-r border-gray-600">
+            {/* Education - only render if education array exists and has items */}
+            {resumeData?.education && resumeData.education.length > 0 && (
+              <div className="pb-2 border-b border-gray-600">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Education</h3>
+                <div className="space-y-6">
+                  {resumeData.education.map((edu, index) => {
+                    return (
+                      <p key={index} className="text-gray-700">
+                        <li>
+                          <>
+                            {edu.graduationYear > currentYear ? (
+                              <>
+                              Currently pursuing <strong>{edu.degree}</strong> from {edu.institution}, expected to graduate in {edu.graduationYear}with current grade of <strong>{edu.grade}</strong> .
+                              </>
+                            ) : edu.graduationYear < currentYear - 2 ? (
+                              <>
+                              Completed <strong>{edu.degree}</strong> from {edu.institution} in {edu.graduationYear} with a grade of <strong>{edu.grade}</strong>.
+                              </>
+                            ) : (
+                              <>
+                              Graduated with <strong>{edu.degree}</strong> from {edu.institution} in {edu.graduationYear} with a grade of <strong>{edu.grade}</strong>.
+                              </>
+                            )}
+                          </>
+                        </li>
+                      </p>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-            {resumeData?.contactInformation?.phoneNumber && (
-              <p className="flex items-center">
-                <FaPhone className="mr-2 text-blue-500" />
-                {resumeData?.contactInformation?.phoneNumber}
-              </p>
+    
+            {/* Work Experience - only render if workExperience array exists and has items */}
+            {resumeData?.workExperience && resumeData.workExperience.length > 0 && (
+              <div className="py-2 border-b border-gray-600">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Work Experience</h3>
+                <div className="space-y-6">
+                  {resumeData.workExperience.map((exp, index) => {
+                    let sentence = "";
+                    if (exp.endDate.toLowerCase() === "present") {
+                      sentence = `${exp.jobTitle} at ${exp.companyName} (${exp.location}) since ${exp.startDate}.`;
+                    } else {
+                      sentence = `${exp.jobTitle} at ${exp.companyName} (${exp.location}) from ${exp.startDate} to ${exp.endDate}.`;
+                    }
+                    return (
+                      <div key={`exp-${index}`}>
+                        <p className="text-gray-700 font-bold"><li>{sentence}</li></p>
+                        <p className="text-gray-700">{exp.description}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-            {resumeData?.contactInformation?.address && (
-              <p className="flex items-center">
-                <FaMapMarkerAlt className="mr-2 text-blue-500" />
-                {resumeData?.contactInformation?.address}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-  
-      <div className="flex flex-row text-justify">
-        <div className="flex w-full flex-col pr-3 border-r border-gray-600">
-          {/* Education - only render if education array exists and has items */}
-          {resumeData?.education && resumeData.education.length > 0 && (
-            <div className="pb-2 border-b border-gray-600">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Education</h3>
-              <div className="space-y-6">
-                {resumeData.education.map((edu, index) => {
-                  return (
+            
+            {/* Certifications - only render if certifications array exists and has items */}
+            {resumeData?.certifications && resumeData.certifications.length > 0 && (
+              <div className="py-2">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Certifications</h3>
+                <div className="space-y-6">
+                  {resumeData.certifications.map((cert, index) => (
                     <p key={index} className="text-gray-700">
-                      <li>
-                        <>
-                          {edu.graduationYear > currentYear ? (
-                            <>
-                            Currently pursuing <strong>{edu.degree}</strong> from {edu.institution}, expected to graduate in {edu.graduationYear}with current grade of <strong>{edu.grade}</strong> .
-                            </>
-                          ) : edu.graduationYear < currentYear - 2 ? (
-                            <>
-                            Completed <strong>{edu.degree}</strong> from {edu.institution} in {edu.graduationYear} with a grade of <strong>{edu.grade}</strong>.
-                            </>
-                          ) : (
-                            <>
-                            Graduated with <strong>{edu.degree}</strong> from {edu.institution} in {edu.graduationYear} with a grade of <strong>{edu.grade}</strong>.
-                            </>
-                          )}
-                        </>
-                      </li>
+                      <p className="font-bold">{cert.name}</p>{`issued by ${cert.issuer} on ${cert.date}.`}
                     </p>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-  
-          {/* Work Experience - only render if workExperience array exists and has items */}
-          {resumeData?.workExperience && resumeData.workExperience.length > 0 && (
-            <div className="py-2 border-b border-gray-600">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Work Experience</h3>
-              <div className="space-y-6">
-                {resumeData.workExperience.map((exp, index) => {
-                  let sentence = "";
-                  if (exp.endDate.toLowerCase() === "present") {
-                    sentence = `${exp.jobTitle} at ${exp.companyName} (${exp.location}) since ${exp.startDate}.`;
-                  } else {
-                    sentence = `${exp.jobTitle} at ${exp.companyName} (${exp.location}) from ${exp.startDate} to ${exp.endDate}.`;
-                  }
-                  return (
-                    <div key={`exp-${index}`}>
-                      <p className="text-gray-700 font-bold"><li>{sentence}</li></p>
-                      <p className="text-gray-700">{exp.description}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
           
-          {/* Certifications - only render if certifications array exists and has items */}
-          {resumeData?.certifications && resumeData.certifications.length > 0 && (
-            <div className="py-2">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Certifications</h3>
-              <div className="space-y-6">
-                {resumeData.certifications.map((cert, index) => (
-                  <p key={index} className="text-gray-700">
-                    <p className="font-bold">{cert.name}</p>{`issued by ${cert.issuer} on ${cert.date}.`}
-                  </p>
-                ))}
+          <div className="w-full flex flex-col pl-3">
+            {/* Skills - only render if skills exist */}
+            {resumeData?.skills && 
+              ((resumeData.skills.technical && resumeData.skills.technical.length > 0) || 
+              (resumeData.skills.soft && resumeData.skills.soft.length > 0)) && (
+              <div className="py-2 border-b border-gray-600">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Skills</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {resumeData.skills.technical && resumeData.skills.technical.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-700">Technical Skills</h4>
+                      <ul className="list-disc list-inside text-gray-700">
+                        {resumeData.skills.technical.map((skill, index) => (
+                          <li key={index}>{skill}</li>
+                        ))}                    
+                      </ul>
+                    </div>
+                  )}
+                  {resumeData.skills.soft && resumeData.skills.soft.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-700">Soft Skills</h4>
+                      <ul className="list-disc list-inside text-gray-700">
+                        {resumeData.skills.soft.map((skill, index) => (
+                          <li key={index}>{skill}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-        
-        <div className="w-full flex flex-col pl-3">
-          {/* Skills - only render if skills exist */}
-          {resumeData?.skills && 
-            ((resumeData.skills.technical && resumeData.skills.technical.length > 0) || 
-             (resumeData.skills.soft && resumeData.skills.soft.length > 0)) && (
-            <div className="py-2 border-b border-gray-600">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Skills</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {resumeData.skills.technical && resumeData.skills.technical.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-gray-700">Technical Skills</h4>
-                    <ul className="list-disc list-inside text-gray-700">
-                      {resumeData.skills.technical.map((skill, index) => (
-                        <li key={index}>{skill}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {resumeData.skills.soft && resumeData.skills.soft.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-gray-700">Soft Skills</h4>
-                    <ul className="list-disc list-inside text-gray-700">
-                      {resumeData.skills.soft.map((skill, index) => (
-                        <li key={index}>{skill}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+            )}
+    
+            {/* Projects - only render if projects array exists and has items */}
+            {resumeData?.projects && resumeData.projects.length > 0 && (
+              <div className="py-2 border-b border-gray-600">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Projects</h3>
+                <div className="space-y-6">
+                  {resumeData.projects.map((project, index) => (
+                    <p key={index} className="text-gray-700">
+                      <p className="font-bold">{project.name}:</p>{`${project.description}`}
+                    </p>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-  
-          {/* Projects - only render if projects array exists and has items */}
-          {resumeData?.projects && resumeData.projects.length > 0 && (
-            <div className="py-2 border-b border-gray-600">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Projects</h3>
-              <div className="space-y-6">
-                {resumeData.projects.map((project, index) => (
-                  <p key={index} className="text-gray-700">
-                    <p className="font-bold">{project.name}:</p>{`${project.description}`}
-                  </p>
-                ))}
+            )}
+    
+            {/* Achievements - only render if achievements array exists and has items */}
+            {resumeData?.achievements && resumeData.achievements.length > 0 && (
+              <div className="py-2">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Achievements</h3>
+                <div className="space-y-6">
+                  {resumeData.achievements.map((ach, index) => (
+                    <p key={index} className="text-gray-700">
+                      <p className="font-bold">{ach.name}</p>{`issued by ${ach.issuer} on ${ach.date}.`}
+                    </p>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-  
-          {/* Achievements - only render if achievements array exists and has items */}
-          {resumeData?.achievements && resumeData.achievements.length > 0 && (
-            <div className="py-2">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Achievements</h3>
-              <div className="space-y-6">
-                {resumeData.achievements.map((ach, index) => (
-                  <p key={index} className="text-gray-700">
-                    <p className="font-bold">{ach.name}</p>{`issued by ${ach.issuer} on ${ach.date}.`}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  const MinimalistTemplate = () => (
+  const MinimalistTemplate = ( {resumeData} ) => (
     <div id="resume-content" className="bg-white">
       {/* Header Section */}
       <header className="mb-8">
@@ -442,7 +478,7 @@ const ResumeBuilder = ({ userId }) => {
     </div>
   ); 
 
-  const CompactTemplate = () => {
+  const CompactTemplate = ( {resumeData} ) => {
     return (
       <div className="mx-auto">
         {/* Header Section */}
@@ -585,7 +621,7 @@ const ResumeBuilder = ({ userId }) => {
     );
   };  
 
-  const ProfessionalTemplate = () => (
+  const ProfessionalTemplate = ( {resumeData} ) => (
     <div className="max-w-4xl mx-auto bg-white">
       {/* Header Section */}
       <header className="mb-8 bg-gray-800 text-white p-6">
@@ -705,15 +741,31 @@ const ResumeBuilder = ({ userId }) => {
   const renderTemplate = () => {
     switch (selectedTemplate) {
       case "modern":
-        return <ModernTemplate />;
+        return <ModernTemplate resumeData={resumeData} />;
       case "minimal":
-        return <MinimalistTemplate />;
+        return <MinimalistTemplate resumeData={resumeData} />;
       case "compact":
-        return <CompactTemplate />;
+        return <CompactTemplate resumeData={resumeData} />;
       case "professional":
-        return <ProfessionalTemplate />;
+        return <ProfessionalTemplate resumeData={resumeData} />;
       default:
-        return <ModernTemplate />;
+        return <ModernTemplate resumeData={resumeData} />;
+    }
+  };
+
+  const renderTemplateWithData = (data) => {
+    // Clone the components but pass in the specific data
+    switch (selectedTemplate) {
+      case "modern":
+        return <ModernTemplate resumeData={data} />;
+      case "minimal":
+        return <MinimalistTemplate resumeData={data} />;
+      case "compact":
+        return <CompactTemplate resumeData={data} />;
+      case "professional":
+        return <ProfessionalTemplate resumeData={data} />;
+      default:
+        return <ModernTemplate resumeData={data} />;
     }
   };
 
@@ -721,16 +773,36 @@ const ResumeBuilder = ({ userId }) => {
     const fetchResumeData = async () => {
       try {
         const docRef = doc(db, "userProfiles", userId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setResumeData(docSnap.data());
+        
+        // Set up real-time listener for resume data updates
+        const unsubscribe = onSnapshot(docRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const newData = docSnap.data();
+            
+            // Store the previous version in local storage before updating
+            if (resumeData) {
+              localStorage.setItem(`previous-resume-${userId}`, JSON.stringify(resumeData));
+            }
+            
+            setResumeData(newData);
+          }
+        });
+        
+        // Initial fetch to avoid delay
+        const initialDocSnap = await getDoc(docRef);
+        if (initialDocSnap.exists()) {
+          setResumeData(initialDocSnap.data());
         }
+        
+        // Clean up listener on component unmount
+        return () => unsubscribe();
       } catch (error) {
         console.error("Error fetching resume data:", error);
       } finally {
         setLoading(false);
       }
     };
+    
     fetchResumeData();
   }, [userId]);
 
@@ -744,7 +816,10 @@ const ResumeBuilder = ({ userId }) => {
       const imgHeight = (resumeRef.current.offsetHeight * imgWidth) / resumeRef.current.offsetWidth; // Maintain aspect ratio
 
       pdf.addImage(dataUrl, "PNG", 0, 0, imgWidth, imgHeight);
-      pdf.save(`${resumeData?.personalInfo?.name || "Resume"}.pdf`);
+      
+      // Use the correct path for the name
+      const fileName = resumeData?.contactInformation?.fullName || "Resume";
+      pdf.save(`${fileName}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
     }
@@ -756,7 +831,7 @@ const ResumeBuilder = ({ userId }) => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="mb-8 flex space-x-4">
+      <div className="mb-8 flex flex-wrap gap-4">
         <div className="flex items-center">
           <FaPalette className="mr-2" />
           <select
@@ -794,14 +869,63 @@ const ResumeBuilder = ({ userId }) => {
             Download PDF
           </button>
         </div>
+        
+        <div className="flex items-center">
+          <button
+            onClick={handleCompareResume}
+            className="border rounded px-3 py-2 bg-purple-500 text-white hover:bg-purple-600"
+          >
+            Compare Previous Resume
+          </button>
+        </div>
+
+        {/* Add toggle for comparison view if available */}
+        {showComparison && (
+          <div className="flex items-center">
+            <button
+              onClick={() => setShowComparison(false)}
+              className="border rounded px-3 py-2 bg-gray-500 text-white hover:bg-gray-600"
+            >
+              Hide Comparison
+            </button>
+          </div>
+        )}
       </div>
       
-      <div 
-        ref={resumeRef} 
-        className={`${templates[selectedTemplate].className} ${fonts[selectedFont].className}`}
-      >
-        {renderTemplate()}
-      </div>
+      {showComparison && previousResumeData ? (
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Previous Version */}
+          <div className="md:w-1/2">
+            <h3 className="text-xl font-bold mb-2 text-gray-700">Previous Version</h3>
+            <div 
+              className={`${templates[selectedTemplate].className} ${fonts[selectedFont].className} border border-gray-300 opacity-90`}
+            >
+              {renderTemplateWithData(previousResumeData)}
+            </div>
+          </div>
+          
+          {/* Current Version */}
+          <div className="md:w-1/2">
+            <h3 className="text-xl font-bold mb-2 text-gray-700 flex items-center">
+              Current Version
+              <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Latest</span>
+            </h3>
+            <div 
+              ref={resumeRef}
+              className={`${templates[selectedTemplate].className} ${fonts[selectedFont].className} border border-green-300`}
+            >
+              {renderTemplate()}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div 
+          ref={resumeRef} 
+          className={`${templates[selectedTemplate].className} ${fonts[selectedFont].className}`}
+        >
+          {renderTemplate()}
+        </div>
+      )}
     </div>
   );
 };

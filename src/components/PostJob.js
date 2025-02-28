@@ -130,7 +130,7 @@ const PostJob = ({ employerId }) => {
       });
   
       resetForm();
-      navigate("/dashboard");
+      navigate("/employer-dashboard");
     } catch (error) {
       console.error("Error posting job:", error);
       setSnackbar({
