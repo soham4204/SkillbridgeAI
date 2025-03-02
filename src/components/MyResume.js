@@ -893,7 +893,7 @@ const ResumeBuilder = ({ userId }) => {
       </div>
       
       {showComparison && previousResumeData ? (
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4 w-full">
           {/* Previous Version */}
           <div className="md:w-1/2">
             <h3 className="text-xl font-bold mb-2 text-gray-700">Previous Version</h3>

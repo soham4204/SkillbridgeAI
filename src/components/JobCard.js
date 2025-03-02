@@ -20,7 +20,7 @@ const Icons = {
   AlertTriangle: (props) => <ExclamationTriangleIcon {...props} />
 };
 
-const JobCard = ({ job }) => {
+const JobCard = ({ job, matchPercentage = 0 }) => {
   const [expanded, setExpanded] = useState(false);
   const [companyData, setCompanyData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -128,6 +128,14 @@ const JobCard = ({ job }) => {
     return salary ? `₹${salary.toLocaleString()}` : "Not disclosed";
   };
 
+  // Get color based on match percentage
+  const getMatchColor = () => {
+    if (matchPercentage >= 80) return "bg-green-100 text-green-800";
+    if (matchPercentage >= 60) return "bg-blue-100 text-blue-800";
+    if (matchPercentage >= 40) return "bg-yellow-100 text-yellow-800";
+    return "bg-orange-100 text-orange-800";
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 transition-all duration-200 hover:shadow-lg">
       <div className="flex justify-between items-start">
@@ -135,20 +143,26 @@ const JobCard = ({ job }) => {
           <h3 className="text-xl font-semibold text-gray-800">{job.jobTitle}</h3>
           <p className="text-gray-600 font-medium">{job.companyName}</p>
           <div className="flex flex-wrap gap-2 mt-3">
-          {job.requiredSkills && job.requiredSkills.map((skill, index) => (
-            <span
-              key={index}
-              className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
-            >
-              {skill}
-            </span>
-          ))}
-        </div>
+            {job.requiredSkills && job.requiredSkills.map((skill, index) => (
+              <span
+                key={index}
+                className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="flex flex-col items-end">
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mb-2">
             {job.jobType}
           </span>
+          
+          {/* Show match percentage */}
+          <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${getMatchColor()}`}>
+            {matchPercentage}% Match
+          </span>
+          
           {/* Show application status badge if applied */}
           {hasApplied && (
             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mt-2 flex items-center">
@@ -156,6 +170,7 @@ const JobCard = ({ job }) => {
               Applied
             </span>
           )}
+          
           <span className="text-gray-500 text-sm mt-2">
             {job.createdAt ? new Date(job.createdAt.toDate()).toLocaleDateString() : "Recently posted"}
           </span>
@@ -163,7 +178,6 @@ const JobCard = ({ job }) => {
       </div>
 
       <div className="mt-4">
-        
         <div className="mt-4 flex justify-between items-center">
           <div className="text-gray-700 font-medium">
             {formatSalary(job.salary)} <span className="text-gray-500 font-normal">per year</span>

@@ -16,6 +16,7 @@ import axios from 'axios';
 import ScrollingNews from '../components/ScrollingNews';
 import { FaBriefcase, FaGraduationCap, FaChartLine, FaHandshake } from 'react-icons/fa';
 import Blogs from '../components/Blogs';
+import Footer from '../components/Footer';
 
 function Home() {
   const navigate = useNavigate();
@@ -225,7 +226,7 @@ function Home() {
             </SwiperSlide>
             
             {/* UX/UI Designer Slide */}
-            <SwiperSlide>
+            {/* <SwiperSlide>
               <div className="flex flex-col h-80 bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-lg shadow-md p-6 transition-all duration-300 hover:shadow-xl">
                 <div className="flex items-center mb-4">
                   <FaBriefcase className="text-2xl mr-2" />
@@ -245,7 +246,7 @@ function Home() {
                   View Details
                 </Link>
               </div>
-            </SwiperSlide>
+            </SwiperSlide> */}
           </Swiper>
         </section>
 
@@ -381,8 +382,11 @@ function Home() {
               </SwiperSlide>
             ))}
           </Swiper>
+
         </section> */}
+         
       </main>
+      <Footer />
     </div>
   );
 }

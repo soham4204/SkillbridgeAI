@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase-config";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ import EducationSection from "../components/profile/Education";
 import CertificationsSection from "../components/profile/Certifications";
 import ProjectsSection from "../components/profile/Projects";
 import AchievementsSection from "../components/profile/Achievements";
+
 
 const CreateProfile = ({ userId: propUserId }) => {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const CreateProfile = ({ userId: propUserId }) => {
     achievements: [],
   });
 
+
   // Get userId from Firebase Auth if not provided as prop
   useEffect(() => {
     if (!userId) {
@@ -44,10 +46,11 @@ const CreateProfile = ({ userId: propUserId }) => {
           setSaveError("You need to be logged in to create a profile. Please sign in first.");
         }
       });
-      
+     
       return () => unsubscribe();
     }
   }, [userId]);
+
 
   const steps = [
     { name: "Contact Information", component: <ContactInfoSection formData={formData} setFormData={setFormData} /> },
@@ -60,6 +63,7 @@ const CreateProfile = ({ userId: propUserId }) => {
     { name: "Achievements", component: <AchievementsSection formData={formData} setFormData={setFormData} /> },
   ];
 
+
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep((prev) => prev + 1);
@@ -67,6 +71,7 @@ const CreateProfile = ({ userId: propUserId }) => {
       window.scrollTo(0, 0);
     }
   };
+
 
   const handlePrevious = () => {
     if (currentStep > 0) {
@@ -76,9 +81,11 @@ const CreateProfile = ({ userId: propUserId }) => {
     }
   };
 
+
   const handleSkip = () => {
     handleNext();
   };
+
 
   const handleSaveProgress = async () => {
     if (!userId) {
@@ -87,40 +94,42 @@ const CreateProfile = ({ userId: propUserId }) => {
       return false;
     }
 
+
     setSaving(true);
     setSaveError(null);
     setProcessingState("Saving profile data...");
     console.log("Attempting to save profile data for user:", userId);
     console.log("Form data being saved:", formData);
 
+
     try {
       const profileRef = doc(db, "userProfiles", userId);
-      
+     
       // Using setDoc with merge option to create the document if it doesn't exist
       setProcessingState("Creating/updating document in Firestore...");
       await setDoc(profileRef, formData, { merge: true });
       console.log("Profile saved successfully");
-      
+     
       setProcessingState("Save completed successfully");
       return true;
     } catch (err) {
       console.error("Error saving progress:", err);
-      console.error("Error details:", { 
+      console.error("Error details:", {
         code: err.code,
         message: err.message,
         stack: err.stack,
         userId: userId,
         formDataKeys: Object.keys(formData)
       });
-      
+     
       let errorMessage = "Failed to save profile data. ";
-      
+     
       if (err.code === "permission-denied") {
         errorMessage += "You don't have permission to update this profile.";
       } else {
         errorMessage += err.message || "Unknown error occurred.";
       }
-      
+     
       setSaveError(errorMessage);
       setProcessingState("Error occurred during save");
       return false;
@@ -129,23 +138,24 @@ const CreateProfile = ({ userId: propUserId }) => {
     }
   };
 
+
   const handleFinish = async () => {
     console.log("Finish button clicked");
-    
+   
     if (!userId) {
       console.error("Cannot finish: userId is not defined");
       setSaveError("You need to be logged in to save your profile. Please sign in and try again.");
       return;
     }
-    
+   
     try {
       setProcessingState("Starting finish process");
       console.log("Current user ID:", userId);
-      
+     
       console.log("Attempting to save data before showing popup");
       const saveSuccessful = await handleSaveProgress();
       console.log("Save result:", saveSuccessful);
-      
+     
       if (saveSuccessful) {
         console.log("Setting popup to visible");
         setShowFinishPopup(true);
@@ -159,36 +169,41 @@ const CreateProfile = ({ userId: propUserId }) => {
     }
   };
 
+
   // For demonstration purposes if no user is logged in
   const handleFinishDemo = () => {
     console.log("Demo finish button clicked");
     setShowFinishPopup(true);
   };
 
+
   const navigateToDashboard = () => {
     console.log("Navigating to dashboard");
     navigate("/jobseeker-dashboard");
   };
+
 
   const navigateToResume = () => {
     console.log("Navigating to resume view");
     navigate("/jobseeker-dashboard");
   };
 
+
   const progressPercentage = ((currentStep + 1) / steps.length) * 100;
+
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white rounded-xl shadow-lg border border-gray-100">
       <h1 className="text-3xl font-bold mb-6 text-gray-800 text-center">Build Your Professional Profile</h1>
-      
+     
       {/* Step indicators */}
       <div className="mb-8 overflow-x-auto">
         <div className="flex justify-between min-w-max">
           {steps.map((step, index) => (
             <div key={index} className="flex flex-col items-center mx-2">
-              <div 
+              <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all duration-300
-                  ${index < currentStep ? 'bg-green-500 text-white' : 
+                  ${index < currentStep ? 'bg-green-500 text-white' :
                     index === currentStep ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}
               >
                 {index < currentStep ? (
@@ -207,7 +222,8 @@ const CreateProfile = ({ userId: propUserId }) => {
         </div>
       </div>
 
-      {/* Debug info - remove in production */}
+
+      {/* Debug info - remove in production
       {process.env.NODE_ENV !== "production" && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-xs font-mono">Debug Info:</p>
@@ -216,7 +232,8 @@ const CreateProfile = ({ userId: propUserId }) => {
           <p className="text-xs font-mono">Current Step: {currentStep + 1}/{steps.length}</p>
           <p className="text-xs font-mono">Popup Visible: {showFinishPopup ? "Yes" : "No"}</p>
         </div>
-      )}
+      )} */}
+
 
       {/* User not logged in warning */}
       {!userId && (
@@ -235,23 +252,25 @@ const CreateProfile = ({ userId: propUserId }) => {
         </div>
       )}
 
+
       {/* Progress bar */}
       <div className="w-full bg-gray-100 rounded-full h-2.5 mb-6 overflow-hidden">
-        <div 
-          className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-in-out" 
+        <div
+          className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-in-out"
           style={{ width: `${progressPercentage}%` }}
         ></div>
       </div>
+
 
       {/* Step indicator */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-700">
           {steps[currentStep].name}
         </h2>
-        <button 
-          onClick={handleSaveProgress} 
+        <button
+          onClick={handleSaveProgress}
           className={`flex items-center px-3 py-1.5 rounded-lg transition-colors
-            ${!userId ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`} 
+            ${!userId ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
           disabled={saving || !userId}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -260,6 +279,7 @@ const CreateProfile = ({ userId: propUserId }) => {
           {saving ? "Saving..." : "Save Progress"}
         </button>
       </div>
+
 
       {saveError && (
         <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-lg">
@@ -277,10 +297,12 @@ const CreateProfile = ({ userId: propUserId }) => {
         </div>
       )}
 
+
       {/* Current step component with card styling */}
       <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8 transition-all duration-300">
         {steps[currentStep].component}
       </div>
+
 
       {/* Navigation buttons */}
       <div className="flex justify-between items-center mt-8">
@@ -296,16 +318,18 @@ const CreateProfile = ({ userId: propUserId }) => {
           Previous
         </button>
 
-        <button 
-          onClick={handleSkip} 
+
+        <button
+          onClick={handleSkip}
           className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium transition-colors"
         >
           Skip for now
         </button>
 
+
         {currentStep < steps.length - 1 ? (
-          <button 
-            onClick={handleNext} 
+          <button
+            onClick={handleNext}
             className="flex items-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Next
@@ -314,8 +338,8 @@ const CreateProfile = ({ userId: propUserId }) => {
             </svg>
           </button>
         ) : (
-          <button 
-            onClick={userId ? handleFinish : handleFinishDemo} 
+          <button
+            onClick={userId ? handleFinish : handleFinishDemo}
             className="flex items-center px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             disabled={saving}
           >
@@ -339,6 +363,7 @@ const CreateProfile = ({ userId: propUserId }) => {
         )}
       </div>
 
+
       {/* Finish Popup with improved modal design */}
       {showFinishPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -352,8 +377,8 @@ const CreateProfile = ({ userId: propUserId }) => {
             </div>
             <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">Profile Created Successfully!</h2>
             <p className="text-center text-gray-600 mb-6">
-              {userId 
-                ? "Your professional profile has been created and saved. What would you like to do next?" 
+              {userId
+                ? "Your professional profile has been created and saved. What would you like to do next?"
                 : "Demo mode: Your profile would have been created if you were logged in. What would you like to do next?"}
             </p>
             <div className="flex flex-col space-y-3">
@@ -388,5 +413,6 @@ const CreateProfile = ({ userId: propUserId }) => {
     </div>
   );
 };
+
 
 export default CreateProfile;

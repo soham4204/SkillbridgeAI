@@ -3,12 +3,14 @@ import { analyzeCareerPaths, getCourseRecommendations } from '../services/genaiS
 import { getJobRolesSkills, getUserProfile } from '../services/firebaseService';  
 import { auth } from '../firebase-config'; 
 import CourseView from './CourseView';
+import SkillsVerification from './SkillsVerification'; // Import the SkillsVerification component
 
 const SkillAnalyzer = () => {
   const [loading, setLoading] = useState(true);
   const [careerAnalysis, setCareerAnalysis] = useState(null);
   const [error, setError] = useState(null);
   const [technicalSkills, setTechnicalSkills] = useState([]);
+  const [verifiedSkills, setVerifiedSkills] = useState([]);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [currentRole, setCurrentRole] = useState(null);
   const [courseLoading, setCourseLoading] = useState(false);
@@ -43,6 +45,11 @@ const SkillAnalyzer = () => {
 
         const skills = userProfile.skills.technical;
         setTechnicalSkills(skills);
+        
+        // Set verified skills if available in the user profile
+        if (userProfile.verifiedSkills) {
+          setVerifiedSkills(userProfile.verifiedSkills);
+        }
 
         // Calculate skill statistics
         setSkillStats({
@@ -64,6 +71,13 @@ const SkillAnalyzer = () => {
 
     fetchUserSkills();
   }, []);
+
+  // Handler for when skills are verified
+  const handleSkillsVerified = (newVerifiedSkills) => {
+    setVerifiedSkills(newVerifiedSkills);
+    // You might want to refresh career analysis here when skills are verified
+    // as verified skills could have different weight in career matching
+  };
 
   const fetchCourseRecommendations = async (role, missingSkills) => {
     setCourseLoading(true);
@@ -243,25 +257,21 @@ const SkillAnalyzer = () => {
     );
   };
 
-const CourseCard = ({ course, level }) => {
-  return (
-    <CourseView course={course} role={currentRole} />
-  );
-};
+  const CourseCard = ({ course, level }) => {
+    return (
+      <CourseView course={course} role={currentRole} />
+    );
+  };
 
   return (
     <>
-      <div className="container mx-auto p-4 max-w-7xl">
-        
+      <div className="container mx-auto p-4 max-w-7xl">    
+        {/* Replace the existing skills display with SkillsVerification component */}
         <div className="bg-white p-6 rounded-xl shadow-md mb-8">
-          <h3 className="text-xl font-bold mb-4 text-gray-800">Your Current Technical Skills</h3>
-          <div className="flex flex-wrap gap-2">
-            {technicalSkills.map((skill, index) => (
-              <span key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                {skill}
-              </span>
-            ))}
-          </div>
+          <SkillsVerification 
+            technicalSkills={technicalSkills} 
+            onSkillsVerified={handleSkillsVerified} 
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -272,90 +282,103 @@ const CourseCard = ({ course, level }) => {
                   <h3 className="text-2xl font-bold text-gray-800">{path.role}</h3>
                   <div className="relative w-20 h-20">
                     <svg viewBox="0 0 36 36" className="w-20 h-20 transform -rotate">
-                      <path
+                      {/* <path
                         d="M18 2.0845
                           a 15.9155 15.9155 0 0 1 0 31.831
                           a 15.9155 15.9155 0 0 1 0 -31.831"
                         fill="none"
                         stroke="#eee"
                         strokeWidth="3"
-                      />
+                      /> */}
                       <path
-                        d="M18 2.0845
-                          a 15.9155 15.9155 0 0 1 0 31.831
-                          a 15.9155 15.9155 0 0 1 0 -31.831"
+                        d="..."  // Assuming your path definition is here
                         fill="none"
                         stroke={path.matchPercentage > 70 ? "#10b981" : path.matchPercentage > 40 ? "#3b82f6" : "#ef4444"}
                         strokeWidth="3"
                         strokeDasharray={`${path.matchPercentage}, 100`}
                       />
-                      <text x="18" y="20.5" textAnchor="middle" className="text-md font-bold" fill={path.matchPercentage > 70 ? "#10b981" : path.matchPercentage > 40 ? "#3b82f6" : "#ef4444"}>
+                      <text
+                        x="50%"
+                        y="50%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fontSize="16"
+                        fontWeight="bold"
+                        fill={path.matchPercentage > 70 ? "#10b981" : path.matchPercentage > 40 ? "#3b82f6" : "#ef4444"}
+                      >
                         {path.matchPercentage}%
                       </text>
                     </svg>
                   </div>
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
-                </div>
-                
-                <div className="p-6">
-                  <div className="mb-6">
-                    <h4 className="flex items-center font-semibold text-green-700 mb-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Skills You Already Have ({path.matchedSkills.length})
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {path.matchedSkills.map((skill, idx) => (
-                        <span key={idx} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="mb-6">
-                    <h4 className="flex items-center font-semibold text-red-700 mb-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Skills To Develop ({path.missingSkills.length})
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {path.missingSkills.map((skill, idx) => (
-                        <span key={idx} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      onClick={() => fetchCourseRecommendations(path.role, path.missingSkills)}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center shadow-md"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                      Course Recommendations
-                    </button>
-                    <button
-                      className="bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg transition-colors flex items-center justify-center"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      Learning Path
-                    </button>
-                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+                
+              <div className="p-6">
+                <div className="mb-6">
+                  <h4 className="flex items-center font-semibold text-green-700 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Skills You Already Have ({path.matchedSkills.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {path.matchedSkills.map((skill, idx) => (
+                      <span key={idx} className={`px-3 py-1 rounded-full text-sm ${
+                        verifiedSkills.includes(skill) 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {skill}
+                        {verifiedSkills.includes(skill) && (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1 inline" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="mb-6">
+                  <h4 className="flex items-center font-semibold text-red-700 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Skills To Develop ({path.missingSkills.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {path.missingSkills.map((skill, idx) => (
+                      <span key={idx} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => fetchCourseRecommendations(path.role, path.missingSkills)}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center shadow-md"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    Course Recommendations
+                  </button>
+                  <button
+                    className="bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-50 px-4 py-3 rounded-lg transition-colors flex items-center justify-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Learning Path
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-      
       {showRecommendations && <CourseRecommendationsOverlay />}
     </>
   );

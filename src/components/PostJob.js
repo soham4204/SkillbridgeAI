@@ -11,12 +11,9 @@ import { auth } from "../firebase-config";
 
 const jobCategories = {
   "Software Engineer": "Software Development",
-  "Data Scientist": "Data Science & AI",
-  "Frontend Developer": "Software Development",
-  "Backend Developer": "Software Development",
-  "Machine Learning Engineer": "Data Science & AI",
-  "DevOps Engineer": "IT & Cloud",
-  "Cybersecurity Analyst": "Cybersecurity"
+  "Full Stack Developer": "Software Development",
+  "AI ML Engineer": "Data Science & AI",
+  "CLoud And Devops Engineer": "IT And Cloud",
 };
 
 const jobRoles = Object.keys(jobCategories);

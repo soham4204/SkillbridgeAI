@@ -376,136 +376,171 @@ const CourseCompletionCheck = () => {
 
       {/* Certificate upload popup */}
       {showCertPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-3xl font-bold text-gray-800">
-                  You Passed the Test!
-                </h3>
-              <h3 className="text-xl font-bold text-gray-800">
-                Upload Your Certificate
-              </h3>
-              <button 
-                onClick={() => setShowCertPopup(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+  <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-8 animate-fadeIn">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8 border-b pb-4">
+        <div>
+          <h3 className="text-3xl font-bold text-gray-800 mb-1">
+            <span className="text-blue-600">🎉</span> You Passed the Test!
+          </h3>
+          <p className="text-gray-500">Document your achievement with a certificate</p>
+        </div>
+        <button 
+          onClick={() => setShowCertPopup(false)}
+          className="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-full hover:bg-gray-100"
+          aria-label="Close"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Certificate Name</label>
-                <input
-                  type="text"
-                  value={certificationData.name}
-                  onChange={(e) => setCertificationData({...certificationData, name: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded"
-                  placeholder="e.g., Machine Learning Fundamentals"
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Issuing Organization</label>
-                  <input
-                    type="text"
-                    value={certificationData.issuer}
-                    onChange={(e) => setCertificationData({...certificationData, issuer: e.target.value})}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="e.g., Coursera"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date Issued</label>
-                  <input
-                    type="date"
-                    value={certificationData.date}
-                    onChange={(e) => setCertificationData({...certificationData, date: e.target.value})}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Skills Learned</label>
-                <input
-                  type="text"
-                  value={certificationData.skills.join(", ")}
-                  onChange={(e) => {
-                    const skillsArray = e.target.value.split(",").map(skill => skill.trim()).filter(Boolean);
-                    setCertificationData({...certificationData, skills: skillsArray});
-                  }}
-                  className="w-full p-2 border border-gray-300 rounded"
-                  placeholder="e.g., Python, Machine Learning, Data Science (separate with commas)"
-                />
-                <p className="text-xs text-gray-500 mt-1">Separate skills with commas</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Certificate Image</label>
-                <div className="mt-1 flex items-center">
-                  {certificationData.imageUrl ? (
-                    <div className="relative">
-                      <img 
-                        src={certificationData.imageUrl} 
-                        alt={certificationData.name} 
-                        className="h-32 w-auto object-contain border border-gray-300 rounded"
-                      />
-                      <button
-                        onClick={() => setCertificationData({...certificationData, imageUrl: ""})}
-                        className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center -mt-2 -mr-2"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <input
-                        type="file"
-                        id="certificate-image"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                      />
-                      <label
-                        htmlFor="certificate-image"
-                        className="cursor-pointer px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        {imageUploading ? "Uploading..." : "Upload Image"}
-                      </label>
-                      <p className="text-xs text-gray-500 mt-1">Upload your certification image</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={handleSaveCertification}
-                disabled={loading || !certificationData.name || !certificationData.issuer}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-md ${
-                  loading || !certificationData.name || !certificationData.issuer
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-blue-700'
-                }`}
-              >
-                {loading ? 'Saving...' : 'Save Certificate'}
-              </button>
-            </div>
-          </div>
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded mb-6 flex items-start">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          <span>{error}</span>
         </div>
       )}
+
+      {/* Form Fields */}
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Certificate Name</label>
+          <input
+            type="text"
+            value={certificationData.name}
+            onChange={(e) => setCertificationData({...certificationData, name: e.target.value})}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            placeholder="e.g., Machine Learning Fundamentals"
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Issuing Organization</label>
+            <input
+              type="text"
+              value={certificationData.issuer}
+              onChange={(e) => setCertificationData({...certificationData, issuer: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              placeholder="e.g., Coursera"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date Issued</label>
+            <input
+              type="date"
+              value={certificationData.date}
+              onChange={(e) => setCertificationData({...certificationData, date: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Skills Learned</label>
+          <input
+            type="text"
+            value={certificationData.skills.join(", ")}
+            onChange={(e) => {
+              const skillsArray = e.target.value.split(",").map(skill => skill.trim()).filter(Boolean);
+              setCertificationData({...certificationData, skills: skillsArray});
+            }}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            placeholder="e.g., Python, Machine Learning, Data Science"
+          />
+          <p className="text-xs text-gray-500 mt-2 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Separate skills with commas
+          </p>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Certificate Image</label>
+          <div className="mt-1">
+            {certificationData.imageUrl ? (
+              <div className="relative inline-block">
+                <img 
+                  src={certificationData.imageUrl} 
+                  alt={certificationData.name} 
+                  className="h-40 max-w-full object-contain border border-gray-300 rounded-lg shadow-sm"
+                />
+                <button
+                  onClick={() => setCertificationData({...certificationData, imageUrl: ""})}
+                  className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center -mt-2 -mr-2 shadow-md hover:bg-red-600 transition"
+                  aria-label="Remove image"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer">
+                <input
+                  type="file"
+                  id="certificate-image"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                />
+                <label
+                  htmlFor="certificate-image"
+                  className="cursor-pointer flex flex-col items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
+                  </svg>
+                  <span className="text-sm font-medium text-blue-600">
+                    {imageUploading ? "Uploading..." : "Upload Certificate Image"}
+                  </span>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Drag and drop or click to browse
+                  </p>
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer/Actions */}
+      <div className="mt-8 flex justify-end">
+        <button
+          onClick={() => setShowCertPopup(false)}
+          className="px-4 py-2 mr-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSaveCertification}
+          disabled={loading || !certificationData.name || !certificationData.issuer}
+          className={`px-6 py-2 bg-blue-600 text-white rounded-md shadow-sm transition ${
+            loading || !certificationData.name || !certificationData.issuer
+              ? 'opacity-50 cursor-not-allowed'
+              : 'hover:bg-blue-700 hover:shadow'
+          }`}
+        >
+          {loading ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </span>
+          ) : 'Save Certificate'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </>
   );
 };
