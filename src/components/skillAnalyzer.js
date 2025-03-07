@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react';
-import { analyzeCareerPaths, getCourseRecommendations, generateLearningPath } from '../services/genaiService';
+import { analyzeCareerPaths, getCourseRecommendations } from '../services/genaiService';
 import { getJobRolesSkills, getUserProfile } from '../services/firebaseService';  
 import { auth } from '../firebase-config'; 
 import CourseView from './CourseView';
