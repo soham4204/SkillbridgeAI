@@ -12,6 +12,7 @@ import ProfilePage from "../components/Profile";
 import SkillAnalyzer from "../components/skillAnalyzer";
 import { getAuth } from "firebase/auth";
 import CourseCompletionCheck from "../components/CourseCompletionCheck";
+import JobsListingPage from "../components/JobDisplay";
 
 const JobseekerDashboard = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -154,28 +155,7 @@ const JobseekerDashboard = () => {
         <CourseCompletionCheck />
         <SkillAnalyzer userProfile={userProfile}/>
         <SearchBar onSearch={handleSearch} />
-        
-        {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
-          </div>
-        ) : filteredJobs.length > 0 ? (
-          <div className="space-y-6 mt-6">
-            {filteredJobs.map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <Icons.Search className="h-16 w-16 mx-auto text-gray-400" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No jobs found</h3>
-            <p className="mt-2 text-gray-500">
-              {searchQuery 
-                ? "Try adjusting your search terms or filters." 
-                : "Check back later for new job postings."}
-            </p>
-          </div>
-        )}
+        <JobsListingPage jobs={filteredJobs} loading={loading} />
       </div>
     );
   };

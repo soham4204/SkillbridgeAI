@@ -31,7 +31,7 @@ import {
   FilterList
 } from "@mui/icons-material";
 import { db } from "../firebase-config";
-import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, updateDoc, query, where } from "firebase/firestore";import { auth } from "../firebase-config";
 
 const jobCategories = {
   "Software Engineer": "Software Development",
@@ -73,11 +73,32 @@ const ManageJobs = () => {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const querySnapshot = await getDocs(collection(db, "jobs"));
+      // Get the current user ID
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        console.error("No user is logged in");
+        setSnackbar({
+          open: true,
+          message: 'Please log in to view your jobs',
+          severity: 'error'
+        });
+        setLoading(false);
+        return;
+      }
+      
+      const userId = currentUser.uid;
+      
+      // Query jobs collection with a filter for the current user's ID
+      const querySnapshot = await getDocs(
+        query(collection(db, "jobs"), where("userId", "==", userId))
+      );
+      
       const jobsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
       setJobs(jobsData);
       setFilteredJobs(jobsData);
     } catch (error) {

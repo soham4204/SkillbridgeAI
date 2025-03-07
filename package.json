@@ -8,6 +8,7 @@
     "@emotion/styled": "^11.13.0",
     "@google/generative-ai": "^0.22.0",
     "@heroicons/react": "^2.2.0",
+    "@langchain/google-genai": "^0.1.10",
     "@mui/icons-material": "^6.0.2",
     "@mui/lab": "^6.0.0-beta.9",
     "@mui/material": "^6.0.2",
@@ -29,6 +30,7 @@
     "html2pdf.js": "^0.10.2",
     "ipfs-http-client": "^60.0.1",
     "jspdf": "^2.5.2",
+    "langchain": "^0.3.19",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.476.0",
     "prop-types": "^15.8.1",
@@ -50,7 +52,8 @@
     "swiper": "^11.1.14",
     "web-vitals": "^2.1.4",
     "web3": "^4.16.0",
-    "yup": "^1.4.0"
+    "yup": "^1.4.0",
+    "zod": "^3.24.2"
   },
   "scripts": {
     "start": "react-scripts start",

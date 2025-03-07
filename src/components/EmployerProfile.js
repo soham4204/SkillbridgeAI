@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { getAuth } from 'firebase/auth';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 
 const EmployerProfile = () => {
@@ -27,14 +27,12 @@ const EmployerProfile = () => {
   const auth = getAuth();
   const db = getFirestore();
 
-  const fetchEmployerProfile = async () => {
+  // Use useCallback to memoize the fetch function
+  const fetchEmployerProfile = useCallback(async (userId) => {
+    if (!userId) return;
+    
+    setLoading(true);
     try {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        setError('No authenticated user found');
-        return;
-      }
-
       const docRef = doc(db, 'employers', userId);
       const docSnap = await getDoc(docRef);
 
@@ -43,14 +41,26 @@ const EmployerProfile = () => {
       }
       setLoading(false);
     } catch (err) {
+      console.error('Error fetching profile:', err);
       setError('Error fetching profile data');
       setLoading(false);
     }
-  };
+  }, [db]);
 
   useEffect(() => {
-    fetchEmployerProfile();
-  }, []);
+    // Handle auth state changes properly
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        fetchEmployerProfile(user.uid);
+      } else {
+        setError('No authenticated user found');
+        setLoading(false);
+      }
+    });
+
+    // Clean up subscription
+    return () => unsubscribe();
+  }, [auth, fetchEmployerProfile]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -79,11 +89,15 @@ const EmployerProfile = () => {
         return;
       }
 
+      setLoading(true);
       const docRef = doc(db, 'employers', userId);
       await setDoc(docRef, profileData, { merge: true });
       setIsEditing(false);
+      setLoading(false);
     } catch (err) {
+      console.error('Error saving profile:', err);
       setError('Error saving profile data');
+      setLoading(false);
     }
   };
 
@@ -112,6 +126,7 @@ const EmployerProfile = () => {
               ? 'bg-green-600 hover:bg-green-700' 
               : 'bg-blue-600 hover:bg-blue-700'
             }`}
+          disabled={loading}
         >
           {isEditing ? 'Save Changes' : 'Edit Profile'}
         </button>
@@ -244,8 +259,6 @@ const EmployerProfile = () => {
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
             />
           </div>
-
-          
         </div>
 
         <div className="mb-8">

@@ -1,82 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { PromptTemplate } from "@langchain/core/prompts";
-import { LLMChain } from "langchain/chains";
+import { initializeGenAI, createChatModel } from './genaiConfig';
 
-// Utility function to initialize Google Generative AI
-export const initializeGenAI = () => {
-  const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GOOGLE_API_KEY);
-  return genAI;
-};
-
-// Create Langchain chat model wrapper
-export const createChatModel = () => {
-  return new ChatGoogleGenerativeAI({
-    model: "gemini-1.5-flash",
-    temperature: 0.2,
-    apiKey: process.env.REACT_APP_GOOGLE_API_KEY
-  });
-};
-
-// Prompt template for career path analysis
-export const careerPathPromptTemplate = new PromptTemplate({
-  template: `Analyze career paths for a job seeker with the following technical skills: {userSkills}
-
-Job roles and their required skills:
-{jobRolesSkills}
-
-Provide a detailed analysis:
-1. Identify best-matching career paths
-2. Calculate match percentage for each path
-3. List matched and missing skills
-
-Respond strictly in the following JSON format:
-{{
-  "careerPaths": [
-    {{
-      "role": "Job Role Name",
-      "matchPercentage": 85,
-      "matchedSkills": ["Skill1", "Skill2"],
-      "missingSkills": ["Skill3", "Skill4"]
-    }}
-  ]
-}}
-
-Ensure results are sorted by matchPercentage in descending order.`,
-  inputVariables: ["userSkills", "jobRolesSkills"]
-});
-
-// Prompt template for course recommendations
-export const courseRecommendationPromptTemplate = new PromptTemplate({
-  template: `Recommend courses for learning these skills for a {role} career:
-Missing skills: {missingSkills}
-
-For each skill, provide courses at three levels:
-1. Beginner
-2. Intermediate
-3. Advanced
-
-Provide detailed course information in this JSON format:
-{{
-  "beginner": [
-    {{
-      "skill": "Skill Name",
-      "title": "Course Title",
-      "provider": "Provider Name",
-      "duration": "X weeks",
-      "rating": 4.5,
-      "description": "Course description"
-    }}
-  ],
-  "intermediate": [],
-  "advanced": []
-}}
-
-Ensure courses are current, diverse, and from reputable providers.`,
-  inputVariables: ["role", "missingSkills"]
-});
-
-// Career path analysis with Langchain
+/**
+ * Calculates weighted skill matches for career paths based on user skills and role requirements
+ * @param {Array} userSkills - Array of user's technical skills
+ * @param {Object} jobRolesSkills - Object mapping job roles to required skills
+ * @returns {Object} - Career path analysis with weighted matching
+ */
 export const analyzeCareerPaths = async (userSkills, jobRolesSkills) => {
   try {
     // Get weighted skills for each job role
@@ -132,6 +61,11 @@ export const analyzeCareerPaths = async (userSkills, jobRolesSkills) => {
   }
 };
 
+/**
+ * Uses Gemini to assign weights to skills for each job role
+ * @param {Object} jobRolesSkills - Object mapping job roles to required skills
+ * @returns {Object} - Object mapping roles to arrays of weighted skills
+ */
 const getWeightedSkillsForRoles = async (jobRolesSkills) => {
   const weightedJobSkills = {};
   const chatModel = createChatModel();
@@ -153,7 +87,6 @@ const getWeightedSkillsForRoles = async (jobRolesSkills) => {
       // Call Gemini API
       const result = await chatModel.invoke(prompt);
       const responseText = result.content;
-      console.log(`Response for ${role}:`, responseText);
       
       // Extract JSON from response
       const jsonMatch = responseText.match(/\[.*\]/s);
@@ -182,7 +115,12 @@ const getWeightedSkillsForRoles = async (jobRolesSkills) => {
   return weightedJobSkills;
 };
 
-// Course recommendation with Langchain
+/**
+ * Gets course recommendations for a specific role based on missing skills
+ * @param {string} role - The job role
+ * @param {Array} missingSkills - Array of skills the user needs to develop
+ * @returns {Object} - Object with beginner, intermediate, and advanced course recommendations
+ */
 export const getCourseRecommendations = async (role, missingSkills) => {
   try {
     const chatModel = createChatModel();
@@ -238,14 +176,3 @@ export const getCourseRecommendations = async (role, missingSkills) => {
   }
 };
 
-// Optional: Add error handling and logging middleware
-export const createCareerAdvisorChain = (chatModel) => {
-  return new LLMChain({
-    llm: chatModel,
-    prompt: new PromptTemplate({
-      template: "Analyze and advise on career development: {input}",
-      inputVariables: ["input"]
-    }),
-    verbose: true // Enables detailed logging
-  });
-};

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase-config';
@@ -357,7 +357,7 @@ const CourseView = ({ course, role }) => {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold mb-4 text-gray-800">Course Complete?</h3>
             <p className="text-gray-600 mb-4">
-              Great progress on "{course?.title || 'the course'}"! Ready to test your knowledge? Take a quick assessment to earn your certificate.
+              Great progress on "{course?.title || 'the course'}"! Ready to test your knowledge? Take a quick assessment to upload your certificate.
             </p>
             <div className="flex justify-end space-x-3">
               <button 

@@ -2,6 +2,58 @@ import React, { useState, useEffect } from "react";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase-config";
 
+const ProfilePicture = ({ formData, isEditing, imageUploading, handleImageUpload, error, setFormData }) => {
+  return (
+    <div className="mb-6">
+      <h3 className="text-lg font-medium mb-2">Profile Picture</h3>
+      <div className="flex items-center space-x-4">
+        <div className="w-32 h-40 relative overflow-hidden border-2 border-gray-300">
+          {formData.profilePicture ? (
+            <img 
+              src={formData.profilePicture} 
+              alt="Profile" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <span className="text-gray-400">No Image</span>
+            </div>
+          )}
+        </div>
+        
+        {isEditing && (
+          <div className="flex flex-col">
+            <label 
+              htmlFor="profile-upload" 
+              className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded cursor-pointer"
+            >
+              {imageUploading ? 'Uploading...' : 'Upload Photo'}
+            </label>
+            <input
+              id="profile-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              disabled={imageUploading}
+            />
+            {formData.profilePicture && (
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, profilePicture: "" }))}
+                className="mt-2 text-red-500 text-sm hover:text-red-700"
+              >
+                Remove Photo
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      {error && <p className="text-red-500 mt-2">{error}</p>}
+    </div>
+  );
+};
+
 const ProfilePage = ({ userId }) => {
   const educationorder = [
     "degree",
@@ -348,57 +400,7 @@ const ProfilePage = ({ userId }) => {
     }
   };
 
-  const ProfilePicture = () => {
-    return (
-      <div className="mb-6">
-        <h3 className="text-lg font-medium mb-2">Profile Picture</h3>
-        <div className="flex items-center space-x-4">
-          <div className="w-32 h-40 relative overflow-hidden border-2 border-gray-300">
-            {formData.profilePicture ? (
-              <img 
-                src={formData.profilePicture} 
-                alt="Profile" 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                <span className="text-gray-400">No Image</span>
-              </div>
-            )}
-          </div>
-          
-          {isEditing && (
-            <div className="flex flex-col">
-              <label 
-                htmlFor="profile-upload" 
-                className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded cursor-pointer"
-              >
-                {imageUploading ? 'Uploading...' : 'Upload Photo'}
-              </label>
-              <input
-                id="profile-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                disabled={imageUploading}
-              />
-              {formData.profilePicture && (
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, profilePicture: "" }))}
-                  className="mt-2 text-red-500 text-sm hover:text-red-700"
-                >
-                  Remove Photo
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-        {error && <p className="text-red-500 mt-2">{error}</p>}
-      </div>
-    );
-  };
+  
 
   const addSkill = (category, skill) => {
     if (!skill.trim()) return;
@@ -483,7 +485,14 @@ const ProfilePage = ({ userId }) => {
       <div className="mb-6">
         {/* Contact Information */}
         <section className="bg-white p-6 rounded-lg shadow">
-        <ProfilePicture />
+        <ProfilePicture 
+            formData={formData}
+            isEditing={isEditing}
+            imageUploading={imageUploading}
+            handleImageUpload={handleImageUpload}
+            error={error}
+            setFormData={setFormData}
+          />
         </section>
       </div>
 

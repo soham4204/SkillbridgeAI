@@ -39,7 +39,7 @@ export const getUserProfile = async () => {
 // Get job roles and skills data
 export const getJobRolesSkills = async () => {
       return {
-        "Full Stack Developer": ["HTML/CSS", "JavaScript", "Node.js", "Frontend Frameworks", "Backend Development", "Version Control", "Database Management", "Mobile App Development", "APIs", "Testing/Debugging", "System Design and Architecture"],
+        "Full Stack Developer": ["HTML/CSS", "Javascript", "Node.js", "Frontend Frameworks", "Backend Development", "Version Control", "Database Management", "Mobile App Development", "APIs", "Testing/Debugging", "System Design and Architecture"],
         "AI/ML Engineer": ["Python", "Machine Learning Frameworks", "Deep Learning", "Data Science Tools", "NLP", "Computer Vision", "Data Visualization", "Big Data Tools", "Model Deployment", "Data Analysis and Statistics"],
         "Cloud and DevOps Engineer": ["Cloud Platforms", "Infrastructure as Code", "Containerization", "Orchestration", "CI/CD", "Monitoring and Logging", "Scripting", "Configuration Management", "Networking", "System Design and Architecture", "Operating Systems"],
         "Software Engineer": ["Version Control", "Database Management", "Networking and Security Protocols", "Blockchain Development", "Cybersecurity", "Security Tools", "Cryptography", "Identity Management", "DevSecOps"]

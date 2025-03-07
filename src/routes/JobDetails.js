@@ -15,7 +15,7 @@ const jobData = {
       "Integrate APIs and third-party services."
     ],
     skills: [
-      "HTML, CSS, JavaScript, React, Angular",
+      "HTML, CSS, Javascript, React, Angular",
       "Backend frameworks (Node.js, Express.js, Django)",
       "Database management (SQL, NoSQL, Firebase)",
       "Version control (Git, GitHub, GitLab)",
