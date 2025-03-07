@@ -336,12 +336,6 @@ const CourseView = ({ course, role }) => {
             {course?.duration || "4 weeks"}
           </div>
           
-          <div className="flex items-center mb-4">
-            <span className="text-sm font-medium bg-gray-200 text-gray-800 px-2 py-1 rounded">
-              {course?.provider || "Provider"}
-            </span>
-          </div>
-          
           <button 
             className="block w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors text-center"
             onClick={handleViewCourse}

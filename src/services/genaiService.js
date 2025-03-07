@@ -14,11 +14,12 @@ export const createChatModel = () => {
   return new ChatGoogleGenerativeAI({
     model: "gemini-1.5-flash",
     temperature: 0.2,
-    apiKey: process.env.REACT_APP_GOOGLE_API_KEY
+    apiKey: process.env.REACT_APP_GOOGLE_API_KEY,
+    maxRetries: 2, // Limit retries to avoid excessive requests
   });
 };
 
-// Prompt template for career path analysis
+// Prompt templates remain unchanged
 export const careerPathPromptTemplate = new PromptTemplate({
   template: `Analyze career paths for a job seeker with the following technical skills: {userSkills}
 
@@ -46,7 +47,6 @@ Ensure results are sorted by matchPercentage in descending order.`,
   inputVariables: ["userSkills", "jobRolesSkills"]
 });
 
-// Prompt template for course recommendations
 export const courseRecommendationPromptTemplate = new PromptTemplate({
   template: `Recommend courses for learning these skills for a {role} career:
 Missing skills: {missingSkills}
@@ -76,11 +76,14 @@ Ensure courses are current, diverse, and from reputable providers.`,
   inputVariables: ["role", "missingSkills"]
 });
 
-// Career path analysis with Langchain
+// Cache for storing weighted skills to avoid redundant API calls
+const skillWeightCache = new Map();
+
+// OPTIMIZED: Career path analysis without excessive API calls
 export const analyzeCareerPaths = async (userSkills, jobRolesSkills) => {
   try {
-    // Get weighted skills for each job role
-    const weightedJobSkills = await getWeightedSkillsForRoles(jobRolesSkills);
+    // Use local calculation instead of API calls for skill weights
+    const weightedJobSkills = calculateSkillWeights(jobRolesSkills);
     
     // Calculate career paths with weighted matching
     const careerPaths = [];
@@ -132,67 +135,124 @@ export const analyzeCareerPaths = async (userSkills, jobRolesSkills) => {
   }
 };
 
-const getWeightedSkillsForRoles = async (jobRolesSkills) => {
+// OPTIMIZED: Function to calculate skill weights locally without API calls
+const calculateSkillWeights = (jobRolesSkills) => {
   const weightedJobSkills = {};
-  const chatModel = createChatModel();
+  
+  // Predefined weight templates based on common role patterns
+  const weightTemplates = {
+    technical: {
+      primary: 25,     // Core technical skills
+      secondary: 15,   // Supporting technical skills
+      soft: 10,        // Soft skills
+      tools: 12        // Tools and platforms
+    },
+    management: {
+      primary: 20,     // Core management skills
+      technical: 15,   // Technical understanding
+      soft: 25,        // Leadership/soft skills
+      tools: 10        // Tools and platforms
+    }
+  };
   
   for (const [role, skills] of Object.entries(jobRolesSkills)) {
-    try {
-      // Prompt to get skill weightages for this role
-      const prompt = `
-      As an expert career advisor, assign a weight to each of the following skills for the "${role}" role.
-      The weights should sum to 100, and should reflect how important each skill is for this specific role.
-      Higher weights indicate more critical skills.
-      
-      Skills: ${JSON.stringify(skills)}
-      
-      Return ONLY a JSON array with objects containing "skill" and "weight" properties.
-      Example format: [{"skill": "Skill1", "weight": 20}, {"skill": "Skill2", "weight": 15}]
-      `;
-      
-      // Call Gemini API
-      const result = await chatModel.invoke(prompt);
-      const responseText = result.content;
-      console.log(`Response for ${role}:`, responseText);
-      
-      // Extract JSON from response
-      const jsonMatch = responseText.match(/\[.*\]/s);
-      if (jsonMatch) {
-        const weightedSkills = JSON.parse(jsonMatch[0]);
-        weightedJobSkills[role] = weightedSkills;
-      } else {
-        // Fallback: assign equal weights if Gemini's response can't be parsed
-        const equalWeight = 100 / skills.length;
-        weightedJobSkills[role] = skills.map(skill => ({
-          skill,
-          weight: equalWeight
-        }));
-      }
-    } catch (error) {
-      console.error(`Error getting weights for ${role}:`, error);
-      // Fallback: assign equal weights
-      const equalWeight = 100 / skills.length;
-      weightedJobSkills[role] = skills.map(skill => ({
+    // Check if we have this role cached already
+    if (skillWeightCache.has(role)) {
+      weightedJobSkills[role] = skillWeightCache.get(role);
+      continue;
+    }
+    
+    // Determine if role is more technical or management focused
+    const roleType = role.toLowerCase().includes('manager') || 
+                     role.toLowerCase().includes('lead') ? 
+                     'management' : 'technical';
+    
+    const template = weightTemplates[roleType];
+    const weightedSkills = [];
+    
+    // Basic classification of skills into categories
+    const skillCategories = {
+      primary: skills.slice(0, Math.ceil(skills.length * 0.3)), // Top 30% are primary
+      secondary: skills.slice(Math.ceil(skills.length * 0.3), Math.ceil(skills.length * 0.7)),
+      soft: skills.filter(s => 
+        ['communication', 'teamwork', 'leadership', 'problem solving', 'agile'].some(
+          term => s.toLowerCase().includes(term)
+        )
+      ),
+      tools: skills.filter(s => 
+        ['tool', 'platform', 'framework', 'library'].some(
+          term => s.toLowerCase().includes(term)
+        )
+      )
+    };
+    
+    // Assign weights based on categories and ensure total is 100
+    const categorizedSkills = new Set();
+    let remainingWeight = 100;
+    
+    // First assign weights to categorized skills
+    for (const [category, categorySkills] of Object.entries(skillCategories)) {
+      categorySkills.forEach(skill => {
+        if (!categorizedSkills.has(skill)) {
+          weightedSkills.push({
+            skill,
+            weight: template[category]
+          });
+          categorizedSkills.add(skill);
+          remainingWeight -= template[category];
+        }
+      });
+    }
+    
+    // Distribute remaining weight to uncategorized skills
+    const uncategorizedSkills = skills.filter(skill => !categorizedSkills.has(skill));
+    const equalWeight = uncategorizedSkills.length > 0 ? 
+                       Math.max(1, Math.floor(remainingWeight / uncategorizedSkills.length)) : 0;
+    
+    uncategorizedSkills.forEach(skill => {
+      weightedSkills.push({
         skill,
         weight: equalWeight
-      }));
+      });
+      remainingWeight -= equalWeight;
+    });
+    
+    // If there's any remaining weight, add it to the first skill
+    if (remainingWeight > 0 && weightedSkills.length > 0) {
+      weightedSkills[0].weight += remainingWeight;
     }
+    
+    // Store in cache and return
+    skillWeightCache.set(role, weightedSkills);
+    weightedJobSkills[role] = weightedSkills;
   }
   
   return weightedJobSkills;
 };
 
-// Course recommendation with Langchain
+// OPTIMIZED: Batch course recommendations in a single API call for multiple skills
 export const getCourseRecommendations = async (role, missingSkills) => {
+  // If there are no missing skills, return empty results
+  if (!missingSkills || missingSkills.length === 0) {
+    return {
+      beginner: [],
+      intermediate: [],
+      advanced: []
+    };
+  }
+  
+  // Limit the number of missing skills to request at once
+  const limitedSkills = missingSkills.slice(0, 5); // Only get courses for top 5 missing skills
+  
   try {
     const chatModel = createChatModel();
     
-    // Prompt to get course recommendations
+    // Single API call for multiple skills with batched approach
     const prompt = `
     As a technical career advisor, recommend courses to help someone become a "${role}".
-    They need to learn these specific skills: ${JSON.stringify(missingSkills)}
+    They need to learn these specific skills: ${JSON.stringify(limitedSkills)}
     
-    For each skill gap, recommend:
+    For each skill (limited to the most important ones), recommend:
     1. One beginner-level course
     2. One intermediate-level course
     3. One advanced-level course
@@ -211,7 +271,7 @@ export const getCourseRecommendations = async (role, missingSkills) => {
     }
     `;
     
-    // Call Gemini API
+    // Call Gemini API once for all skills
     const result = await chatModel.invoke(prompt);
     const responseText = result.content;
     
@@ -221,7 +281,7 @@ export const getCourseRecommendations = async (role, missingSkills) => {
       const courseRecommendations = JSON.parse(jsonMatch[0]);
       return courseRecommendations;
     } else {
-      // Fallback with empty course lists
+      console.log("Could not parse course recommendation response:", responseText);
       return {
         beginner: [],
         intermediate: [],
@@ -238,14 +298,28 @@ export const getCourseRecommendations = async (role, missingSkills) => {
   }
 };
 
-// Optional: Add error handling and logging middleware
-export const createCareerAdvisorChain = (chatModel) => {
-  return new LLMChain({
-    llm: chatModel,
-    prompt: new PromptTemplate({
-      template: "Analyze and advise on career development: {input}",
-      inputVariables: ["input"]
-    }),
-    verbose: true // Enables detailed logging
-  });
+// Optional: Add debounced chain execution to prevent rapid sequential requests
+let debounceTimeout = null;
+export const debouncedCareerAdvisorChain = (chatModel, input, callback, delay = 500) => {
+  if (debounceTimeout) {
+    clearTimeout(debounceTimeout);
+  }
+  
+  debounceTimeout = setTimeout(async () => {
+    try {
+      const chain = new LLMChain({
+        llm: chatModel,
+        prompt: new PromptTemplate({
+          template: "Analyze and advise on career development: {input}",
+          inputVariables: ["input"]
+        }),
+        verbose: false // Disable verbose logging to reduce console noise
+      });
+      
+      const result = await chain.call({ input });
+      callback(null, result);
+    } catch (error) {
+      callback(error);
+    }
+  }, delay);
 };

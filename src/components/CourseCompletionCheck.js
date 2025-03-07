@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc, updateDoc, arrayUnion, getFirestore } from 'firebase/firestore';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const CourseCompletionCheck = () => {
   const [testInProgress, setTestInProgress] = useState(false);
@@ -34,6 +35,10 @@ const CourseCompletionCheck = () => {
   const navigate = useNavigate();
   const auth = getAuth();
   const db = getFirestore();
+
+  const initializeGenAI = () => {
+    return new GoogleGenerativeAI(process.env.REACT_APP_GOOGLE_API_KEY);
+  };
 
   useEffect(() => {
     // Check if there's a recently viewed course
@@ -69,29 +74,28 @@ const CourseCompletionCheck = () => {
     }
   }, []);
 
-  // Timer effect for test time limit
-  useEffect(() => {
-    let timer = null;
-    
-    if (testInProgress && timeRemaining !== null && timeRemaining > 0) {
-      timer = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            // Auto-submit the test when time runs out
-            calculateScore();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [testInProgress, timeRemaining]);
-
+    // Timer effect for test time limit
+    useEffect(() => {
+      let timer = null;
+      
+      if (testInProgress && timeRemaining !== null && timeRemaining > 0) {
+        timer = setInterval(() => {
+          setTimeRemaining(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              // Auto-submit the test when time runs out
+              calculateScore();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+      
+      return () => {
+        if (timer) clearInterval(timer);
+      };
+    }, [testInProgress, timeRemaining]);
   // Function to fetch test questions from Gemini API
   const fetchTestQuestions = async (courseSubject, difficulty, numQuestions = 10) => {
     setIsLoadingQuestions(true);
@@ -455,18 +459,6 @@ const CourseCompletionCheck = () => {
               Have you completed "{courseInfo?.title || 'the course'}"? Take the competency test and upload your certification to showcase your skills!
             </p>
             <div className="flex justify-between items-center mt-6">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Select Difficulty Level:</label>
-                <select 
-                  className="border rounded-md p-2 text-sm"
-                  value={testDifficulty}
-                  onChange={(e) => setTestDifficulty(e.target.value)}
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
               <div className="flex space-x-3">
                 <button 
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"

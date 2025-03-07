@@ -138,13 +138,13 @@ export const getCourseRecommendations = async (role, missingSkills) => {
     Return ONLY a JSON object with this structure:
     {
       "beginner": [
-        {"title": "Course Title", "platform": "Platform Name", "description": "Brief description", "skill": "Related skill", "duration": "X weeks", "url": "course-url"}
+        {"title": "Course Title", "platform": "Platform Name", "description": "Brief description", "skill": "Related skill", "duration": "X weeks"}
       ],
       "intermediate": [
-        {"title": "Course Title", "platform": "Platform Name", "description": "Brief description", "skill": "Related skill", "duration": "X weeks", "url": "course-url"}
+        {"title": "Course Title", "platform": "Platform Name", "description": "Brief description", "skill": "Related skill", "duration": "X weeks"}
       ],
       "advanced": [
-        {"title": "Course Title", "platform": "Platform Name", "description": "Brief description", "skill": "Related skill", "duration": "X weeks", "url": "course-url"}
+        {"title": "Course Title", "platform": "Platform Name", "description": "Brief description", "skill": "Related skill", "duration": "X weeks"}
       ]
     }
     `;
@@ -176,3 +176,64 @@ export const getCourseRecommendations = async (role, missingSkills) => {
   }
 };
 
+export const generateLearningPath = async (role, userSkills, missingSkills) => {
+  try {
+    const chatModel = createChatModel();
+    
+    // Prompt to get personalized learning path
+    const prompt = `
+    As a senior technical career advisor, create a comprehensive learning path for someone transitioning to a "${role}" role.
+    
+    Current skills: ${JSON.stringify(userSkills)}
+    Skills to develop: ${JSON.stringify(missingSkills)}
+    
+    Create a structured learning journey with:
+    1. A clear timeline (weeks/months)
+    2. Specific milestones
+    3. Projects to build
+    4. Resources to use
+    5. Skills to master at each stage
+    
+    Return ONLY a JSON object with this structure:
+    {
+      "timeline": [
+        {
+          "phase": "Phase name (e.g., Foundation)",
+          "duration": "X weeks/months",
+          "skills": ["Skill1", "Skill2"],
+          "projects": [
+            {"name": "Project name", "description": "Brief description", "complexity": "beginner/intermediate/advanced"}
+          ],
+          "resources": [
+            {"title": "Resource title", "type": "book/course/tutorial/documentation", "link": "URL or name"}
+          ],
+          "milestones": ["Milestone 1", "Milestone 2"]
+        }
+      ],
+      "certification": {
+        "recommended": ["Cert1", "Cert2"],
+        "optional": ["Cert3"]
+      },
+      "communityEngagement": [
+        {"platform": "Platform name", "activity": "What to do", "benefit": "How it helps"}
+      ]
+    }
+    `;
+    
+    // Call Gemini API
+    const result = await chatModel.invoke(prompt);
+    const responseText = result.content;
+    
+    // Extract JSON from response
+    const jsonMatch = responseText.match(/\{.*\}/s);
+    if (jsonMatch) {
+      const learningPath = JSON.parse(jsonMatch[0]);
+      return learningPath;
+    } else {
+      throw new Error("Failed to parse learning path data");
+    }
+  } catch (error) {
+    console.error("Error generating learning path:", error);
+    throw error;
+  }
+};

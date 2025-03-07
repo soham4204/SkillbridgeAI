@@ -17,9 +17,9 @@ import {
 } from "@mui/material";
 import { auth, db } from "../../firebase-config";
 import { doc, setDoc, Timestamp, getDoc } from "firebase/firestore";
+import TestProctoring from "../TestProctoring"; // Import the new component
 
-// This is the sample question set - in a real app you might fetch this from Firestore
-// based on the job requirements
+// Questions array remains the same
 const questions = [
   { question: "What is the primary function of a machine learning model?", options: ["Storing data", "Making predictions", "Rendering graphics", "Managing databases"], answer: "Making predictions" },
   { question: "Which algorithm is commonly used for classification problems?", options: ["Linear Regression", "K-Means Clustering", "Decision Trees", "Apriori"], answer: "Decision Trees" },
@@ -40,6 +40,10 @@ const AIMLtest = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [showError, setShowError] = useState(false);
+  
+  // New state for verification
+  const [verificationComplete, setVerificationComplete] = useState(false);
+  const [showProctoring, setShowProctoring] = useState(true);
 
   useEffect(() => {
     const fetchJobAndCompany = async () => {
@@ -126,6 +130,7 @@ const AIMLtest = () => {
         pass: score >= (questions.length * 0.6),
         answers: userAnswers,
         timestamp: Timestamp.now(),
+        proctored: true, // Add this field to indicate the test was proctored
       };
 
       // Save to Firestore
@@ -142,12 +147,25 @@ const AIMLtest = () => {
     }
   };
 
+  // Handler for verification completion
+  const handleVerificationComplete = (success) => {
+    if (success) {
+      setVerificationComplete(true);
+      setShowProctoring(false);
+    }
+  };
+
   if (jobLoading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
         <CircularProgress />
       </Box>
     );
+  }
+
+  // Show proctoring component if verification is not complete
+  if (showProctoring && !verificationComplete) {
+    return <TestProctoring onVerificationComplete={handleVerificationComplete} jobId={jobId} />;
   }
 
   return (
@@ -168,6 +186,10 @@ const AIMLtest = () => {
         )}
         
         {user && <Typography variant="subtitle1">Candidate: {user.name}</Typography>}
+        
+        <Alert severity="info" sx={{ my: 2 }}>
+          This test is being proctored. Please keep your camera on and remain in view.
+        </Alert>
         
         <LinearProgress 
           variant="determinate" 

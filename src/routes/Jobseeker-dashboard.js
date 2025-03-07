@@ -310,7 +310,7 @@ const JobseekerDashboard = () => {
         sidebarCollapsed ? "ml-20" : "ml-64"
       }`}>
         <Header />
-        <main className="container mx-auto py-6 px-6">
+        <main className="container mx-auto py-2 px-4">
           {currentUser ? renderContent() : (
             <div className="flex justify-center items-center h-screen">
               <div className="text-center">

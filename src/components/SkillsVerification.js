@@ -329,7 +329,6 @@ const SkillsVerification = ({ technicalSkills, onSkillsVerified }) => {
                     <div className="flex justify-between items-start">
                       <div>
                         <h5 className="font-medium">{course.title}</h5>
-                        <p className="text-sm text-gray-600">{course.provider}</p>
                       </div>
                       <span className={`text-xs px-2 py-1 rounded-full ${
                         course.difficulty === "Beginner" ? "bg-green-100 text-green-800" :
@@ -341,7 +340,7 @@ const SkillsVerification = ({ technicalSkills, onSkillsVerified }) => {
                     </div>
                     <div className="mt-2">
                       <a 
-                        href={course.url} 
+                        href="/jobseekers=dashboard" 
                         className="text-sm text-blue-600 hover:underline"
                       >
                         View Course
