@@ -15,7 +15,6 @@ import {
   Step,
   StepLabel,
 } from "@mui/material";
-import * as faceapi from "face-api.js";
 
 const TestProctoring = ({ onVerificationComplete, jobId }) => {
   const navigate = useNavigate();
@@ -25,10 +24,10 @@ const TestProctoring = ({ onVerificationComplete, jobId }) => {
   const [user, setUser] = useState(null);
   const [profilePicture, setProfilePicture] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
   const [verificationStatus, setVerificationStatus] = useState("pending"); // pending, processing, success, failed
+  const [similarity, setSimilarity] = useState(null);
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -70,47 +69,6 @@ const TestProctoring = ({ onVerificationComplete, jobId }) => {
     fetchUserProfile();
   }, [actualJobId, navigate]);
   
-  // Load face detection models
-  useEffect(() => {
-    const loadModels = async () => {
-        try {
-          // Check if models are already loaded
-          if (faceapi.nets.faceRecognitionNet.isLoaded &&
-              faceapi.nets.faceLandmark68Net.isLoaded &&
-              faceapi.nets.ssdMobilenetv1.isLoaded) {
-            console.log("Face-api models already loaded");
-            setModelsLoaded(true);
-            return;
-          }
-          
-          // Direct path to models - adjust as needed for your server structure
-          const MODEL_URL = '/models';
-          console.log("Loading models from:", MODEL_URL);
-          
-          // Load models sequentially
-          console.log("Loading SSD Mobilenet model...");
-          await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-          
-          console.log("Loading Face Landmark model...");
-          await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-          
-          console.log("Loading Face Recognition model...");
-          await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-          
-          setModelsLoaded(true);
-          console.log("All models loaded successfully");
-        } catch (err) {
-          console.error("Error in model loading process:", err);
-          setError(`Model loading failed: ${err.message}. Please ensure the models are correctly installed.`);
-        }
-      };
-      
-    
-    if (!loading && profilePicture) {
-      loadModels();
-    }
-  }, [loading, profilePicture]);
-  
   // Start camera when ready for verification
   const startCamera = async () => {
     try {
@@ -141,71 +99,44 @@ const TestProctoring = ({ onVerificationComplete, jobId }) => {
     };
   }, []);
 
-  // Draw face detections on canvas
-  const drawFaceDetections = (video, detections) => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    // Make canvas visible for debugging
-    canvas.style.display = 'block';
-    canvas.style.position = 'absolute';
-    canvas.style.top = '0';
-    canvas.style.left = '0';
-    
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw video frame on canvas
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // Draw face detections
-    if (detections && detections.length > 0) {
-      detections.forEach(detection => {
-        // Draw face box
-        const box = detection.detection.box;
-        ctx.strokeStyle = '#00ff00';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
-        
-        // Draw face landmarks if available
-        if (detection.landmarks) {
-          const landmarks = detection.landmarks.positions;
-          ctx.fillStyle = '#ff0000';
-          landmarks.forEach(point => {
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI);
-            ctx.fill();
-          });
-        }
-        
-        // Add status text
-        ctx.font = '16px Arial';
-        ctx.fillStyle = '#00ff00';
-        ctx.fillText('Face Detected', box.x, box.y - 5);
-      });
-    }
-  };
-  
-  // Get face descriptor from profile image
-  const getProfileFaceDescriptor = async (profileImg) => {
-    try {
-      const detections = await faceapi.detectSingleFace(profileImg)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+  // Capture current frame from webcam as a blob
+  const captureImage = () => {
+    return new Promise((resolve, reject) => {
+      if (!videoRef.current) {
+        reject(new Error("Video stream not available"));
+        return;
+      }
       
-      return detections?.descriptor;
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      
+      canvas.toBlob(blob => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Failed to capture image"));
+        }
+      }, 'image/jpeg', 0.95);
+    });
+  };
+  
+  // Convert profile picture URL to a blob
+  const getProfileImageBlob = async (url) => {
+    try {
+      const response = await fetch(url);
+      return await response.blob();
     } catch (err) {
-      console.error("Error getting profile face descriptor:", err);
-      return null;
+      console.error("Error fetching profile image:", err);
+      throw new Error("Failed to fetch profile image");
     }
   };
   
-  // Perform face verification
+  // Perform face verification using the API
   const verifyIdentity = async () => {
-    if (!videoRef.current || !modelsLoaded || !profilePicture) {
+    if (!videoRef.current || !profilePicture) {
       setError("Verification system not ready. Please try again.");
       return;
     }
@@ -214,50 +145,36 @@ const TestProctoring = ({ onVerificationComplete, jobId }) => {
     setVerificationStatus("processing");
     
     try {
-      // Load the profile picture for comparison
-      console.log("Loading profile image for comparison");
-      const profileImg = await faceapi.fetchImage(profilePicture);
-      const profileFaceDescriptor = await getProfileFaceDescriptor(profileImg);
-      
-      console.log("Profile face descriptor:", profileFaceDescriptor ? "detected" : "not detected");
-      
-      if (!profileFaceDescriptor) {
-        setError("No face detected in profile picture. Please upload a clear profile photo.");
-        setVerificationStatus("failed");
-        return;
-      }
-      
       // Capture current frame from webcam
-      console.log("Capturing webcam frame for comparison");
-      const webcamDetections = await faceapi.detectAllFaces(videoRef.current)
-        .withFaceLandmarks()
-        .withFaceDescriptors();
+      const webcamImageBlob = await captureImage();
       
-      // Draw detections on canvas for visualization
-      drawFaceDetections(videoRef.current, webcamDetections);
+      // Get profile image as blob
+      const profileImageBlob = await getProfileImageBlob(profilePicture);
       
-      console.log("Webcam detection results:", webcamDetections.length, "faces found");
+      // Create form data for API request
+      const formData = new FormData();
+      formData.append("image1", profileImageBlob, "profile.jpg");
+      formData.append("image2", webcamImageBlob, "webcam.jpg");
       
-      if (webcamDetections.length === 0) {
-        setError("No face detected. Please ensure your face is clearly visible.");
-        setVerificationStatus("failed");
-        return;
+      // Send request to backend API
+      const response = await fetch("http://127.0.0.1:8000/compare_faces/", {
+        method: "POST",
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || "API request failed");
       }
       
-      if (webcamDetections.length > 1) {
-        setError("Multiple faces detected. Please ensure only you are visible in the frame.");
-        setVerificationStatus("failed");
-        return;
-      }
+      console.log("Face comparison result:", data);
       
-      // Compare face descriptors
-      const webcamFaceDescriptor = webcamDetections[0].descriptor;
-      const distance = faceapi.euclideanDistance(profileFaceDescriptor, webcamFaceDescriptor);
-      
-      console.log("Face similarity distance:", distance, "(lower is better)");
+      // Set similarity score
+      setSimilarity(data.similarity_score);
       
       // When comparison completes
-      if (distance < 0.6) {
+      if (data.match) {
         console.log("Verification SUCCESS - faces match!");
         setVerificationStatus("success");
         // Move to next step after a short delay
@@ -265,13 +182,13 @@ const TestProctoring = ({ onVerificationComplete, jobId }) => {
           setStep(1);
         }, 1500);
       } else {
-        console.log("Verification FAILED - faces don't match. Distance:", distance);
-        setError(`Identity verification failed. Distance: ${distance.toFixed(2)} (threshold: 0.6)`);
+        console.log("Verification FAILED - faces don't match. Similarity:", data.similarity_score);
+        setError(`Identity verification failed. Similarity score: ${data.similarity_score.toFixed(2)}`);
         setVerificationStatus("failed");
       }
     } catch (err) {
       console.error("Verification error:", err);
-      setError("Verification failed. Please try again in better lighting conditions.");
+      setError(`Verification failed: ${err.message}. Please try again in better lighting conditions.`);
       setVerificationStatus("failed");
     }
   };
@@ -374,37 +291,42 @@ const TestProctoring = ({ onVerificationComplete, jobId }) => {
             )}
             
             {verificationStatus === "processing" && (
-            <Box sx={{ textAlign: "center", my: 2 }}>
+              <Box sx={{ textAlign: "center", my: 2 }}>
                 <CircularProgress size={24} sx={{ mr: 1 }} />
                 <Typography>Verifying your identity...</Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-                Comparing facial features...
+                  Comparing facial features...
                 </Typography>
-            </Box>
+              </Box>
             )}
             
             {verificationStatus === "success" && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+              <Alert severity="success" sx={{ mb: 2 }}>
                 <Typography variant="body2">Identity verified successfully!</Typography>
                 <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
-                Face match confirmed. Proceeding to next step...
+                  Face match confirmed (Similarity: {similarity?.toFixed(2)}). Proceeding to next step...
                 </Typography>
-            </Alert>
+              </Alert>
             )}
             
             {verificationStatus === "failed" && (
-            <Box>
+              <Box>
                 <Alert severity="error" sx={{ mb: 2 }}>
-                <Typography variant="body2">{error || "Verification failed. Please try again."}</Typography>
-                <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
+                  <Typography variant="body2">{error || "Verification failed. Please try again."}</Typography>
+                  <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
+                    {similarity !== null && `Similarity score: ${similarity.toFixed(2)}`}
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
                     Make sure your face is clearly visible and well-lit.
-                </Typography>
+                  </Typography>
                 </Alert>
                 <Button variant="outlined" onClick={resetVerification}>
-                Try Again
+                  Try Again
                 </Button>
-            </Box>
+              </Box>
             )}
+            
+            <canvas ref={canvasRef} style={{ display: "none" }} />
           </Box>
         );
         
@@ -541,8 +463,6 @@ const TestProctoring = ({ onVerificationComplete, jobId }) => {
       </Stepper>
       
       {renderStep()}
-      
-      <canvas ref={canvasRef} style={{ display: "none" }} />
     </Paper>
   );
 };

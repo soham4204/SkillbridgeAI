@@ -129,12 +129,12 @@ const JobCard = ({ job, matchPercentage = 0 }) => {
   };
 
   // Get color based on match percentage
-  const getMatchColor = () => {
-    if (matchPercentage >= 80) return "bg-green-100 text-green-800";
-    if (matchPercentage >= 60) return "bg-blue-100 text-blue-800";
-    if (matchPercentage >= 40) return "bg-yellow-100 text-yellow-800";
-    return "bg-orange-100 text-orange-800";
-  };
+  // const getMatchColor = () => {
+  //   if (matchPercentage >= 80) return "bg-green-100 text-green-800";
+  //   if (matchPercentage >= 60) return "bg-blue-100 text-blue-800";
+  //   if (matchPercentage >= 40) return "bg-yellow-100 text-yellow-800";
+  //   return "bg-orange-100 text-orange-800";
+  // };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 transition-all duration-200 hover:shadow-lg">
@@ -159,9 +159,9 @@ const JobCard = ({ job, matchPercentage = 0 }) => {
           </span>
           
           {/* Show match percentage */}
-          <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${getMatchColor()}`}>
+          {/* <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${getMatchColor()}`}>
             {matchPercentage}% Match
-          </span>
+          </span> */}
           
           {/* Show application status badge if applied */}
           {hasApplied && (

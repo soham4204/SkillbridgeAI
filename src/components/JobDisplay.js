@@ -175,7 +175,7 @@ const JobsListingPage = ({ jobs: propJobs, loading: propLoading }) => {
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Jobs Matching Your Skills</h1>
       
       {/* Debug information panel - only show in development */}
-      {process.env.NODE_ENV !== 'production' && (
+      {/* {process.env.NODE_ENV !== 'production' && (
         <div className="bg-gray-100 p-4 mb-6 rounded-lg text-sm">
           <h3 className="font-bold mb-2">Debug Information:</h3>
           <ul className="list-disc pl-5">
@@ -187,7 +187,7 @@ const JobsListingPage = ({ jobs: propJobs, loading: propLoading }) => {
           </ul>
           <p className="mt-2 text-gray-600">Check browser console for detailed logs</p>
         </div>
-      )}
+      )} */}
       
       <div className="space-y-6">
         {jobsToDisplay.length > 0 ? (

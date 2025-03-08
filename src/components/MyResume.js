@@ -870,14 +870,14 @@ const ResumeBuilder = ({ userId }) => {
           </button>
         </div>
         
-        <div className="flex items-center">
+        {/* <div className="flex items-center">
           <button
             onClick={handleCompareResume}
             className="border rounded px-3 py-2 bg-purple-500 text-white hover:bg-purple-600"
           >
             Compare Previous Resume
           </button>
-        </div>
+        </div> */}
 
         {/* Add toggle for comparison view if available */}
         {showComparison && (
