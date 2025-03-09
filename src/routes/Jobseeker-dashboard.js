@@ -15,6 +15,7 @@ import CourseCompletionCheck from "../components/CourseCompletionCheck";
 import JobsListingPage from "../components/JobDisplay";
 import ProjectSuggester from "../components/ProjectSuggester";
 import AIMockInterview from "../components/AIMockInterview";
+import ProjectAssistant from "../components/ProjectAssistant";
  
 const JobseekerDashboard = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -140,6 +141,8 @@ const JobseekerDashboard = () => {
         return <ProfilePage userId={currentUser?.uid} />;
       case "project":
         return <ProjectSuggester />;
+      case "projectprogress":
+        return <ProjectAssistant />;
       case "resume":
         return <MyResume userId={currentUser?.uid} />;
       case "jobs":
@@ -250,6 +253,7 @@ const JobseekerDashboard = () => {
       { id: "home", label: "Home", icon: homeIcon },
       { id: "profile", label: "Profile", icon: userIcon },
       { id: "project", label: "Projects", icon: chartIcon },
+      { id: "projectprogress", label: "Project Progress", icon: chartIcon },
       { id: "resume", label: "My Resume", icon: fileIcon },
       { id: "jobs", label: "Applied Jobs", icon: briefcaseIcon },
       { id: "mock-interview", label: " AI Mock Interview", icon: briefcaseIcon },
