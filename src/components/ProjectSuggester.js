@@ -8,6 +8,38 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { StructuredOutputParser } from "langchain/output_parsers";
 import { z } from "zod";
 
+const SkeletonLoader = () => {
+  return (
+    <div className="space-y-6">
+      {["Beginner", "Intermediate", "Expert"].map((category) => (
+        <div key={category} className="border border-gray-200 rounded-lg overflow-hidden animate-pulse">
+          <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <div className="h-6 bg-gray-300 rounded w-1/3"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+            {[1, 2].map((idx) => (
+              <div key={idx} className="p-4">
+                <div className="h-5 bg-gray-300 rounded w-3/4 mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-4/6 mb-4"></div>
+                
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {[1, 2, 3].map((skillIdx) => (
+                    <div key={skillIdx} className="h-6 w-16 bg-gray-200 rounded-full"></div>
+                  ))}
+                </div>
+                
+                <div className="h-8 bg-gray-200 rounded w-full mt-4"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // Sample in-memory job data that would be used for context when suggesting projects
 const IN_MEMORY_JOB_DATA = [
   {
@@ -78,6 +110,8 @@ const ProjectSuggester = () => {
     const [selectedProject, setSelectedProject] = useState(null);
     const [savingProject, setSavingProject] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [cachedProjects, setCachedProjects] = useState({});
+    const [refreshCounter, setRefreshCounter] = useState(0); // Add a refresh counter to force regeneration
     
     const auth = getAuth();
     const db = getFirestore();
@@ -95,7 +129,7 @@ const ProjectSuggester = () => {
           fetchProjectIdeas();
         });
       }
-    }, [technicalSkills]);
+    }, [technicalSkills, refreshCounter]); // Add refreshCounter to the dependency array
 
     // Function to fetch user skills from Firestore
     const fetchUserSkills = async () => {
@@ -103,80 +137,51 @@ const ProjectSuggester = () => {
         setLoading(true);
         setError(null);
         
+        // Check if skills are already in state or cache
+        const cachedSkills = localStorage.getItem('userSkills');
+        if (cachedSkills) {
+          setTechnicalSkills(JSON.parse(cachedSkills));
+          setLoading(false);
+          return;
+        }
+    
         const currentUser = auth.currentUser;
         if (!currentUser) {
           setError('You must be logged in to view project suggestions.');
           setLoading(false);
           return;
         }
-
-        // For debugging - store UID
-        setDebugInfo(prev => ({ ...prev, uid: currentUser.uid }));
-
-        // Try to get user profile from userProfiles collection
+    
         const userProfileRef = doc(db, 'userProfiles', currentUser.uid);
         const userProfileSnap = await getDoc(userProfileRef);
-
-        // Log document data for debugging
-        setDebugInfo(prev => ({ 
-          ...prev, 
-          docExists: userProfileSnap.exists(),
-          docData: userProfileSnap.exists() ? userProfileSnap.data() : null
-        }));
-
+    
         if (userProfileSnap.exists()) {
           const userProfileData = userProfileSnap.data();
-          
-          // Try multiple possible field names where skills might be stored
           let skills = userProfileData.skills?.technical || 
                        userProfileData.skills || 
                        userProfileData.userSkills || 
                        [];
-          
-          // If we found an array of skills, use it
+    
           if (Array.isArray(skills) && skills.length > 0) {
             setTechnicalSkills(skills);
+            localStorage.setItem('userSkills', JSON.stringify(skills));
             setLoading(false);
             return;
           }
         }
-        // Fallback: Check if skills might be in a separate collection
-        try {
-          const skillsCollectionRef = collection(db, 'userProfiles', currentUser.uid, 'skills.technical');
-          const skillsSnapshot = await getDocs(skillsCollectionRef);
-          
-          if (!skillsSnapshot.empty) {
-            const skillsData = skillsSnapshot.docs.map(doc => doc.data().name || doc.id);
-            setTechnicalSkills(skillsData);
-            setDebugInfo(prev => ({ ...prev, skillsCollection: skillsData }));
-            setLoading(false);
-            return;
-          }
-        } catch (subErr) {
-          console.log("Subcollection attempt failed:", subErr);
-          // Continue to the mock data if this fails
-        }
-        
-        // If all else fails, use some default skills as a fallback
+    
+        // Use default skills if none found
         const mockSkills = ["JavaScript", "React", "HTML/CSS", "Firebase"];
         setTechnicalSkills(mockSkills);
-        setDebugInfo(prev => ({ ...prev, usedMockData: true, mockSkills }));
-        console.warn("Could not find user skills, using default skills instead");
-        
+        localStorage.setItem('userSkills', JSON.stringify(mockSkills));
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching user skills:', err);
         setError(`Failed to fetch skills: ${err.message}`);
-        // Use mock skills as fallback
-        setTechnicalSkills(["JavaScript", "React", "HTML/CSS", "Firebase"]);
-        setDebugInfo(prev => ({ 
-          ...prev, 
-          error: err.message, 
-          usedMockData: true 
-        }));
         setLoading(false);
       }
-    };
+    };   
+    
+    
 
     // Function to calculate cosine similarity between two lists of skills
     // This mimics the vector similarity search that would be done in ChromaDB
@@ -198,42 +203,38 @@ const ProjectSuggester = () => {
       return matchCount / jobSkillsArray.length;
     };
 
-    // Function to retrieve relevant job data based on user skills
-    const retrieveRelevantJobs = async () => {
-      try {
-        // Calculate similarity between user skills and each job in our in-memory data
-        const relevantJobs = IN_MEMORY_JOB_DATA
-          .map(job => {
-            const similarity = calculateSkillSimilarity(
-              technicalSkills,
-              job.metadata.skills || ""
-            );
-            return { ...job, similarity };
-          })
-          .filter(job => job.similarity > 0) // Only jobs with at least one matching skill
-          .sort((a, b) => b.similarity - a.similarity) // Sort by similarity score (highest first)
-          .slice(0, 5); // Take top 5 most relevant
-        
-        // Format jobs in the same structure expected by the rest of the code
-        const formattedJobs = relevantJobs.map(job => ({
-          content: job.pageContent,
-          metadata: job.metadata
-        }));
-        
-        setRelevantJobData(formattedJobs);
-        setDebugInfo(prev => ({ 
-          ...prev, 
-          retrievedJobs: formattedJobs.length,
-          jobScores: relevantJobs.map(j => j.similarity)
-        }));
-        
-        return formattedJobs;
-      } catch (err) {
-        console.error("Error retrieving relevant job data:", err);
-        setError(`Failed to retrieve job data: ${err.message}`);
-        return []; // Return empty array if retrieval fails
+    const precomputedSkillLookup = {};
+IN_MEMORY_JOB_DATA.forEach(job => {
+  job.metadata.skills.split(',').forEach(skill => {
+    const trimmedSkill = skill.trim().toLowerCase();
+    if (!precomputedSkillLookup[trimmedSkill]) {
+      precomputedSkillLookup[trimmedSkill] = [];
+    }
+    precomputedSkillLookup[trimmedSkill].push(job);
+  });
+});
+
+const retrieveRelevantJobs = async () => {
+  try {
+    const matchedJobs = new Set();
+    technicalSkills.forEach(skill => {
+      const skillLower = skill.toLowerCase();
+      if (precomputedSkillLookup[skillLower]) {
+        precomputedSkillLookup[skillLower].forEach(job => matchedJobs.add(job));
       }
-    };
+    });
+
+    const formattedJobs = Array.from(matchedJobs).slice(0, 5).map(job => ({
+      content: job.pageContent,
+      metadata: job.metadata
+    }));
+
+    setRelevantJobData(formattedJobs);
+  } catch (err) {
+    setError(`Failed to retrieve job data: ${err.message}`);
+  }
+};
+
 
     // Define the output parser schema using Zod
     const createOutputParser = () => {
@@ -266,6 +267,18 @@ const ProjectSuggester = () => {
       setLoading(true);
       const skillsString = technicalSkills.join(", ");
 
+      const cacheKey = JSON.stringify({
+        skills: skillsString,
+        jobs: relevantJobData.map(job => job.metadata.title),
+        refresh: refreshCounter // Include the refresh counter in the cache key
+      });
+
+      if (cachedProjects[cacheKey]) {
+        setProjects(cachedProjects[cacheKey]);
+        setLoading(false);
+        return;
+      }
+
       try {
         // Create Langchain chat model
         const model = new ChatGoogleGenerativeAI({
@@ -273,6 +286,7 @@ const ProjectSuggester = () => {
           temperature: 0.2,
           apiKey: process.env.REACT_APP_GOOGLE_API_KEY,
           maxRetries: 2,
+          streaming: true,
         });
 
         // Create output parser
@@ -334,6 +348,11 @@ const ProjectSuggester = () => {
           ...(relevantJobData.length > 0 ? { jobContext: jobContext } : {})
         });
 
+        setCachedProjects(prev => ({
+          ...prev,
+          [cacheKey]: result.text
+        }));
+
         // Since we're using an output parser, the response should already be structured
         setProjects(result.text);
       } catch (apiError) {
@@ -366,9 +385,7 @@ const ProjectSuggester = () => {
     
     // Handle refresh to get new project ideas
     const handleRefresh = () => {
-      retrieveRelevantJobs().then(() => {
-        fetchProjectIdeas();
-      });
+      setRefreshCounter(prev => prev + 1); // Increment refresh counter to force cache miss
     };
 
     // Handle selecting a project to view details
@@ -633,12 +650,7 @@ const ProjectSuggester = () => {
               {loading ? "Loading..." : "Refresh Project Ideas"}
             </button>
 
-            {loading && (
-              <div className="text-center py-4">
-                <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
-                <p className="mt-2 text-gray-600">Generating project suggestions based on your skills...</p>
-              </div>
-            )}
+            {loading && <SkeletonLoader />}
 
             {projects && (
               <div className="space-y-6">
@@ -701,14 +713,14 @@ const ProjectSuggester = () => {
         )}
         
         {/* Debug panel - only shown in development */}
-        {process.env.NODE_ENV === 'development' && debugInfo && (
+        {/* {process.env.NODE_ENV === 'development' && debugInfo && (
           <div className="mt-8 p-4 border border-gray-300 rounded-md bg-gray-50">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">Debug Info:</h3>
             <pre className="text-xs overflow-auto max-h-40">
               {JSON.stringify(debugInfo, null, 2)}
             </pre>
           </div>
-        )}
+        )} */}
       </div>
     );
 };
