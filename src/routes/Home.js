@@ -17,6 +17,7 @@ import ScrollingNews from '../components/ScrollingNews';
 import { FaBriefcase, FaGraduationCap, FaChartLine, FaHandshake } from 'react-icons/fa';
 import Blogs from '../components/Blogs';
 import Footer from '../components/Footer';
+import ChatbotIcon from '../components/ChatbotIcon';
 
 function Home() {
   const navigate = useNavigate();
@@ -387,9 +388,9 @@ function Home() {
          
       </main>
       <Footer />
+      <ChatbotIcon />
     </div>
   );
 }
 
 export default Home;
-        

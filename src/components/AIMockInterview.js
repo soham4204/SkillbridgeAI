@@ -1,51 +1,37 @@
-import React, { useState, useEffect } from "react";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+// Simplified version without Firebase dependency
+import { useState, useEffect, useRef } from 'react';
 
 const AIMockInterview = () => {
-    const [question, setQuestion] = useState("Press the button to get a question.");
-    const [transcription, setTranscription] = useState("");
-    const [feedback, setFeedback] = useState("");
+    const [skills, setSkills] = useState(['JavaScript', 'React', 'Node.js']); // Default skills or allow user to input
+    const [question, setQuestion] = useState('');
+    const [transcription, setTranscription] = useState('');
+    const [feedback, setFeedback] = useState('');
     const [isRecording, setIsRecording] = useState(false);
-    const [audio, setAudio] = useState(null);
-    const [interviewActive, setInterviewActive] = useState(false);
-    const [finalAnalysis, setFinalAnalysis] = useState("");
-    const [responses, setResponses] = useState([]);
-    const [showMicPopup, setShowMicPopup] = useState(false);
-    const [countdown, setCountdown] = useState(5);
+    const [countdown, setCountdown] = useState(0);
     const [recordingTimer, setRecordingTimer] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [skills, setSkills] = useState([]);
     const [timerInterval, setTimerInterval] = useState(null);
-
-    // Fetch user skills from Firestore on component mount
-    useEffect(() => {
-        const fetchUserSkills = async () => {
-            try {
-                const auth = getAuth();
-                const currentUser = auth.currentUser;
-                
-                if (currentUser) {
-                    const db = getFirestore();
-                    const userProfileRef = doc(db, "userProfiles", currentUser.uid);
-                    const userProfileSnap = await getDoc(userProfileRef);
-                    
-                    if (userProfileSnap.exists()) {
-                        const userData = userProfileSnap.data();
-                        if (userData.skills.technical && Array.isArray(userData.skills.technical)) {
-                            setSkills(userData.skills.technical);
-                        }
-                    } else {
-                        console.log("No user profile found");
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching user skills:", error);
-            }
-        };
-        
-        fetchUserSkills();
-    }, []);
+    const [showMicPopup, setShowMicPopup] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [audio, setAudio] = useState(null);
+    const [responses, setResponses] = useState([]);
+    const [interviewActive, setInterviewActive] = useState(false);
+    const [finalAnalysis, setFinalAnalysis] = useState('');
+    
+    // For managing skills input
+    const [newSkill, setNewSkill] = useState('');
+    
+    // Add a new skill
+    const addSkill = () => {
+        if (newSkill && !skills.includes(newSkill)) {
+            setSkills([...skills, newSkill]);
+            setNewSkill('');
+        }
+    };
+    
+    // Remove a skill
+    const removeSkill = (skillToRemove) => {
+        setSkills(skills.filter(skill => skill !== skillToRemove));
+    };
 
     useEffect(() => {
         if (audio) {
@@ -78,7 +64,7 @@ const AIMockInterview = () => {
             setCountdown(5);
             setRecordingTimer(0);
             
-            // Include skills in the request to generate targeted questions
+            // Send skills directly in the request
             const response = await fetch("http://127.0.0.1:8000/generate_question", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -142,6 +128,7 @@ const AIMockInterview = () => {
     const startInterview = async () => {
         setInterviewActive(true);
         setResponses([]);
+        setFinalAnalysis('');
         await generateQuestion();
     };
 
@@ -231,130 +218,133 @@ const AIMockInterview = () => {
             }
         }
     };
-
+    
+    // JSX rendering...
     return (
-        <div style={styles.container}>
-            <h1>AI Mock Interview</h1>
-            {!interviewActive ? (
-                <div>
-                    <p>Skills for interview: {skills.length > 0 ? skills.join(", ") : "No skills loaded yet"}</p>
-                    <button onClick={startInterview} style={styles.button} disabled={skills.length === 0}>
+        <div className="container mx-auto p-4">
+            <h1 className="text-2xl font-bold mb-6">Technical Interview Simulator</h1>
+            
+            {!interviewActive && !finalAnalysis && (
+                <div className="mb-8">
+                    <h2 className="text-xl font-semibold mb-4">Your Technical Skills</h2>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {skills.map((skill, index) => (
+                            <div key={index} className="bg-blue-100 px-3 py-1 rounded-full flex items-center">
+                                <span>{skill}</span>
+                                <button 
+                                    onClick={() => removeSkill(skill)}
+                                    className="ml-2 text-red-500"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex gap-2 mb-6">
+                        <input
+                            type="text"
+                            value={newSkill}
+                            onChange={(e) => setNewSkill(e.target.value)}
+                            placeholder="Add a skill"
+                            className="border p-2 rounded"
+                        />
+                        <button 
+                            onClick={addSkill}
+                            className="bg-blue-500 text-white px-4 py-2 rounded"
+                        >
+                            Add
+                        </button>
+                    </div>
+                    <button 
+                        onClick={startInterview}
+                        disabled={skills.length === 0}
+                        className="bg-green-500 text-white px-6 py-3 rounded-lg font-semibold disabled:bg-gray-300"
+                    >
                         Start Interview
                     </button>
                 </div>
-            ) : (
-                <>
-                    <p style={styles.question}>{question}</p>
-                    {countdown > 0 && <p style={styles.timer}>Prepare: {countdown}s</p>}
-                    {showMicPopup && (
-                        <div style={styles.micPopup}>
-                            <p>Recording... Speak Now!</p>
-                            <p style={styles.timer}>{recordingTimer}s / 15s</p>
-                            <span role="img" aria-label="microphone" style={{ fontSize: "50px" }}>🎤</span>
+            )}
+            
+            {interviewActive && (
+                <div>
+                    <div className="bg-gray-100 p-4 rounded-lg mb-6">
+                        <h3 className="font-semibold mb-2">Question:</h3>
+                        <p>{question}</p>
+                    </div>
+                    
+                    {countdown > 0 && (
+                        <div className="text-center mb-4">
+                            <div className="text-2xl font-bold">Get ready in {countdown}...</div>
                         </div>
                     )}
-                    {loading && <p>Processing response...</p>}
-                    {transcription && <p style={styles.transcription}>{transcription}</p>}
-                    {feedback && <p style={styles.feedback}>{feedback}</p>}
-                    <div style={styles.buttonContainer}>
-                        <button onClick={generateQuestion} style={styles.button} disabled={isRecording || loading}>
+                    
+                    {isRecording && (
+                        <div className="text-center mb-4">
+                            <div className="text-xl font-bold text-red-500">Recording... {recordingTimer}s</div>
+                        </div>
+                    )}
+                    
+                    {transcription && (
+                        <div className="bg-gray-100 p-4 rounded-lg mb-4">
+                            <p className="mb-4">{transcription}</p>
+                            <p>{feedback}</p>
+                        </div>
+                    )}
+                    
+                    <div className="flex gap-4 mt-6">
+                        <button 
+                            onClick={generateQuestion}
+                            className="bg-blue-500 text-white px-4 py-2 rounded"
+                            disabled={isRecording || countdown > 0}
+                        >
                             Next Question
                         </button>
-                        <button onClick={endInterview} style={styles.button}>End Interview</button>
+                        
+                        <button 
+                            onClick={endInterview}
+                            className="bg-red-500 text-white px-4 py-2 rounded"
+                            disabled={isRecording || countdown > 0 || responses.length === 0}
+                        >
+                            End Interview
+                        </button>
                     </div>
-                </>
+                    
+                    {loading && (
+                        <div className="text-center mt-4">
+                            <p>Processing your response...</p>
+                        </div>
+                    )}
+                </div>
             )}
+            
             {finalAnalysis && (
-                <div style={styles.finalAnalysis}>
-                    <h2>Final Analysis</h2>
-                    <p>{finalAnalysis}</p>
+                <div className="mt-8">
+                    <h2 className="text-xl font-semibold mb-4">Interview Analysis</h2>
+                    <div className="bg-gray-100 p-6 rounded-lg whitespace-pre-line">
+                        {finalAnalysis}
+                    </div>
+                    <button 
+                        onClick={() => {
+                            setFinalAnalysis('');
+                            setInterviewActive(false);
+                        }}
+                        className="mt-6 bg-blue-500 text-white px-4 py-2 rounded"
+                    >
+                        Start New Interview
+                    </button>
+                </div>
+            )}
+            
+            {showMicPopup && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white p-6 rounded-lg text-center">
+                        <div className="text-xl mb-2">🎤 Recording your answer</div>
+                        <div className="text-red-500 animate-pulse">{recordingTimer}s</div>
+                    </div>
                 </div>
             )}
         </div>
     );
-};
-
-const styles = {
-    container: {
-        maxWidth: "800px",
-        margin: "50px auto",
-        background: "white",
-        padding: "30px",
-        borderRadius: "10px",
-        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-        textAlign: "center",
-        fontFamily: "Arial, sans-serif",
-        backgroundColor: "#f4f4f4"
-    },
-    button: {
-        backgroundColor: "#007bff",
-        color: "white",
-        border: "none",
-        padding: "12px 20px",
-        margin: "10px",
-        cursor: "pointer",
-        borderRadius: "5px",
-        fontSize: "16px",
-        fontWeight: "bold",
-        transition: "background-color 0.3s"
-    },
-    buttonContainer: {
-        display: "flex",
-        justifyContent: "center",
-        gap: "15px",
-        marginTop: "20px"
-    },
-    micPopup: {
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        background: "white",
-        padding: "30px",
-        borderRadius: "10px",
-        boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)",
-        textAlign: "center",
-        fontSize: "18px",
-        fontWeight: "bold",
-        zIndex: 1000,
-        width: "300px"
-    },
-    timer: {
-        fontSize: "24px",
-        fontWeight: "bold",
-        color: "#d9534f"
-    },
-    question: {
-        fontSize: "18px",
-        fontWeight: "bold",
-        marginBottom: "20px",
-        padding: "15px",
-        backgroundColor: "#e9ecef",
-        borderRadius: "5px"
-    },
-    transcription: {
-        textAlign: "left",
-        backgroundColor: "#e9f7fe",
-        padding: "15px",
-        borderRadius: "5px",
-        marginTop: "20px"
-    },
-    feedback: {
-        textAlign: "left",
-        backgroundColor: "#f8f9fa",
-        padding: "15px",
-        borderRadius: "5px",
-        marginTop: "10px",
-        borderLeft: "5px solid #007bff"
-    },
-    finalAnalysis: {
-        marginTop: "30px",
-        padding: "20px",
-        backgroundColor: "#f0f8ff",
-        borderRadius: "8px",
-        textAlign: "left",
-        boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)"
-    }
 };
 
 export default AIMockInterview;
