@@ -5,6 +5,7 @@ import JobListings from "../components/JobListings";
 import PostJob from "../components/PostJob";
 import ManageJobs from "../components/ManageJobs";
 import EmployerProfile from "../components/EmployerProfile";
+import MentorSessions from "../components/MentorSessions";
 
 const EmployerDashboard = () => {
     const [activePage, setActivePage] = useState("profile");
@@ -19,6 +20,8 @@ const EmployerDashboard = () => {
                 return <PostJob />;
             case "manage-jobs":
                 return <ManageJobs />;
+            case "sessions":
+                return <MentorSessions />;
             case "dashboard":
             default:
                 return <Typography variant="h4">Welcome to Employer Dashboard</Typography>;

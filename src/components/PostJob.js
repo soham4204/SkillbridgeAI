@@ -74,17 +74,7 @@ const PostJob = ({ employerId }) => {
     }
   
     try {
-      // Debug employerId
-      if (!userId) {
-        console.error("Error: employerId is missing!");
-        setSnackbar({
-          open: true,
-          message: "Error: Employer details not found",
-          severity: "error",
-        });
-        return;
-      }
-  
+      // First, get employer data
       const employerRef = doc(db, "employers", userId);
       const employerSnap = await getDoc(employerRef);
   
@@ -99,9 +89,9 @@ const PostJob = ({ employerId }) => {
   
       const employerData = employerSnap.data();
       const companyName = employerData?.companyName || "Unknown Company";
-  
       const jobCategory = jobCategories[jobTitle] || "Other";
   
+      // Define job data before creating document
       const jobData = {
         jobTitle,
         jobDescription,
@@ -118,14 +108,27 @@ const PostJob = ({ employerId }) => {
       // Debugging console logs
       console.log("Submitting Job Data:", jobData);
   
-      await addDoc(collection(db, "jobs"), jobData);
+      // Create the job document
+      const jobDocRef = await addDoc(collection(db, "jobs"), jobData);
+  
+      // Create notification after job is created
+      const notificationRef = await addDoc(collection(db, "notifications"), {
+        type: "newJob",
+        jobId: jobDocRef.id,
+        jobTitle: jobTitle,
+        companyName: companyName,
+        category: jobCategory,
+        createdAt: new Date().toISOString(),
+        readBy: [],
+      });
   
       setSnackbar({
         open: true,
         message: "Job posted successfully!",
         severity: "success",
       });
-  
+
+      console.log("Created notification:", notificationRef.id);
       resetForm();
       navigate("/employer-dashboard");
     } catch (error) {

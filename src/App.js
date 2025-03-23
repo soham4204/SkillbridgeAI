@@ -24,6 +24,7 @@ import CreateProfile from "./routes/GetStarted";
 import SuccessStories from "./routes/SuccessStories";
 import ManageJobs from "./components/ManageJobs";
 import AIMockInterview from "./components/AIMockInterview";
+import MeetingRoom from "./components/MeetingRoom";
 
 const theme = createTheme({
   palette: {
@@ -70,6 +71,7 @@ function App() {
             <Route path="/get-started" element={<CreateProfile />} />
             <Route path="/interview" element={<AIMockInterview />} />
             <Route path="manage-jobs" element={<ManageJobs />} />
+            <Route path="/meeting-room/:meetingId" element={<MeetingRoom />} />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>

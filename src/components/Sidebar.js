@@ -15,6 +15,7 @@ const Sidebar = ({ setActivePage }) => {
     { text: "Applied candidates", icon: <Group />, page: "job-listings" },
     { text: "Post a Job", icon: <PostAdd />, page: "post-job" },
     { text: "Manage Jobs", icon: <Work />, page: "manage-jobs" },
+    { text: "Mentor Sessions", icon: <Group />, page: "sessions" },
     { text: "Log Out", icon: <ExitToApp />, page: "/" }
   ];
   

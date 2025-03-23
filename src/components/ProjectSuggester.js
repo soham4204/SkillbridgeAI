@@ -204,15 +204,15 @@ const ProjectSuggester = () => {
     };
 
     const precomputedSkillLookup = {};
-IN_MEMORY_JOB_DATA.forEach(job => {
-  job.metadata.skills.split(',').forEach(skill => {
-    const trimmedSkill = skill.trim().toLowerCase();
-    if (!precomputedSkillLookup[trimmedSkill]) {
-      precomputedSkillLookup[trimmedSkill] = [];
-    }
-    precomputedSkillLookup[trimmedSkill].push(job);
-  });
-});
+    IN_MEMORY_JOB_DATA.forEach(job => {
+      job.metadata.skills.split(',').forEach(skill => {
+        const trimmedSkill = skill.trim().toLowerCase();
+        if (!precomputedSkillLookup[trimmedSkill]) {
+          precomputedSkillLookup[trimmedSkill] = [];
+        }
+        precomputedSkillLookup[trimmedSkill].push(job);
+      });
+    });
 
 const retrieveRelevantJobs = async () => {
   try {
