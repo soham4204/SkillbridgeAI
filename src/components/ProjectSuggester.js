@@ -247,17 +247,17 @@ const retrieveRelevantJobs = async () => {
         estimatedTime: z.string().describe("Estimated time to complete the project"),
         resources: z.array(z.object({
           name: z.string().describe("Name of the resource"),
-          url: z.string().describe("URL of the resource (if applicable)")
+          url: z.string().url().optional().describe("URL of the resource (if applicable)")
         })).describe("Helpful resources for this project")
       });
-
+    
       const CategorySchema = z.object({
         category: z.enum(["Beginner", "Intermediate", "Expert"]).describe("Difficulty level of the projects"),
         projects: z.array(ProjectSchema).describe("List of projects in this difficulty category")
       });
-
+    
       const ResponseSchema = z.array(CategorySchema).describe("Categories of projects organized by difficulty");
-
+    
       return StructuredOutputParser.fromZodSchema(ResponseSchema);
     };
 
@@ -266,36 +266,31 @@ const retrieveRelevantJobs = async () => {
       
       setLoading(true);
       const skillsString = technicalSkills.join(", ");
-
+    
       const cacheKey = JSON.stringify({
         skills: skillsString,
         jobs: relevantJobData.map(job => job.metadata.title),
-        refresh: refreshCounter // Include the refresh counter in the cache key
+        refresh: refreshCounter
       });
-
+    
       if (cachedProjects[cacheKey]) {
         setProjects(cachedProjects[cacheKey]);
         setLoading(false);
         return;
       }
-
+    
       try {
-        // Create Langchain chat model
         const model = new ChatGoogleGenerativeAI({
           model: "gemini-1.5-flash",
           temperature: 0.2,
           apiKey: process.env.REACT_APP_GOOGLE_API_KEY,
           maxRetries: 2,
-          streaming: true,
+          streaming: false, // Disable streaming for more reliable parsing
         });
-
-        // Create output parser
+    
         const outputParser = createOutputParser();
-        
-        // Get the format instructions
         const formatInstructions = outputParser.getFormatInstructions();
-
-        // Prepare job data context
+    
         let jobContext = "";
         if (relevantJobData.length > 0) {
           jobContext = `
@@ -307,8 +302,7 @@ const retrieveRelevantJobs = async () => {
           ).join('\n\n')}
           `;
         }
-
-        // Define the prompt template with format instructions and job context
+    
         const projectIdeasPrompt = new PromptTemplate({
           template: `
           You are a career development advisor tasked with suggesting projects that will help a developer build their portfolio.
@@ -335,52 +329,110 @@ const retrieveRelevantJobs = async () => {
           inputVariables: ["skills", ...(relevantJobData.length > 0 ? ["jobContext"] : [])],
           partialVariables: { format_instructions: formatInstructions }
         });
-
-        // Create and run the chain
+    
         const chain = new LLMChain({
           llm: model,
           prompt: projectIdeasPrompt,
           outputParser: outputParser
         });
-
-        const result = await chain.call({
+    
+        const input = {
           skills: skillsString,
           ...(relevantJobData.length > 0 ? { jobContext: jobContext } : {})
-        });
-
+        };
+    
+        // Add debug logging
+        console.log("Sending request with input:", input);
+        
+        const result = await chain.call(input);
+        
+        // Add debug logging
+        console.log("Received response:", result);
+    
+        if (!result.text) {
+          throw new Error("Empty response from API");
+        }
+    
         setCachedProjects(prev => ({
           ...prev,
           [cacheKey]: result.text
         }));
-
-        // Since we're using an output parser, the response should already be structured
+    
         setProjects(result.text);
       } catch (apiError) {
         console.error("Error fetching projects:", apiError);
-        setError(`API error: ${apiError.message}`);
         
-        // Check if it's a parsing error
-        if (apiError.message.includes("parsing")) {
-          console.log("Raw response:", apiError.output);
+        // More detailed error handling
+        let errorMessage = `API error: ${apiError.message}`;
+        let fallbackProjects = null;
+    
+        if (apiError.message.includes("parsing") || apiError.message.includes("stream")) {
+          errorMessage = "We encountered a formatting issue with the response. Showing simplified results.";
           
-          // Try to extract JSON manually as fallback
-          try {
-            const jsonMatch = apiError.output?.match(/\[\s*{[\s\S]*}\s*\]/);
-            if (jsonMatch) {
-              const projectList = JSON.parse(jsonMatch[0]);
-              setProjects(projectList);
-              setError("Warning: Had to manually parse the response. Some data may be incomplete.");
+          // Try to extract any usable data from the error
+          if (apiError.output) {
+            try {
+              // First try to parse as-is
+              fallbackProjects = JSON.parse(apiError.output);
+            } catch (e) {
+              // If that fails, try to extract JSON from the string
+              const jsonMatch = apiError.output.match(/```json\n([\s\S]*?)\n```/) || 
+                              apiError.output.match(/\[\s*{[\s\S]*}\s*\]/);
+              if (jsonMatch) {
+                try {
+                  fallbackProjects = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                } catch (parseError) {
+                  console.error("Secondary parsing failed:", parseError);
+                }
+              }
             }
-          } catch (parseError) {
-            console.error("Manual parsing failed:", parseError);
-            setProjects([]);
           }
+        }
+    
+        setError(errorMessage);
+        if (fallbackProjects) {
+          setProjects(fallbackProjects);
         } else {
-          setProjects([]);
+          // Use mock data if parsing completely fails
+          setProjects(getMockProjectData(technicalSkills));
         }
       } finally {
         setLoading(false);
       }
+    };
+
+    const getMockProjectData = (skills) => {
+      return [
+        {
+          category: "Beginner",
+          projects: [
+            {
+              title: "Personal Portfolio Website",
+              description: "Build a responsive portfolio website to showcase your projects and skills.",
+              steps: [
+                "Plan your website structure",
+                "Create HTML skeleton",
+                "Add CSS styling",
+                "Make it responsive",
+                "Deploy to Firebase Hosting"
+              ],
+              skills: ["HTML", "CSS", "JavaScript"],
+              learningObjectives: [
+                "Basic web development",
+                "Responsive design principles",
+                "Deployment process"
+              ],
+              estimatedTime: "3-5 days",
+              resources: [
+                { name: "MDN Web Docs", url: "https://developer.mozilla.org" },
+                { name: "Firebase Hosting Guide", url: "https://firebase.google.com/docs/hosting" }
+              ]
+            },
+            // Add more mock projects as needed
+          ]
+        },
+        // Add intermediate and expert categories
+      ];
     };
     
     // Handle refresh to get new project ideas
